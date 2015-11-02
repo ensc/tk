@@ -63,7 +63,7 @@ function tk.init()
 	_send		= nil,
 	_idle		= {
 	    timer		= timer({ timeout = 3 }),
-	    timeout		= 10,
+	    timeout		= 60 * 1000,
 	    is_idle		= false,
 	},
 
