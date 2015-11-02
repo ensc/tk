@@ -231,7 +231,7 @@ function connect(self)
     c:setoption('keepalive', true)
     self._try = socket.newtry(function() _close(self) end)
 
-    posix.fcntl(c:getfd(), posix.F_SETFD, 1);
+    posix.fcntl(c:getfd(), posix.F_SETFD, 1)
 
     if self._outbuf_pos > 0 then
 	-- clear dirty outbuf buffer
