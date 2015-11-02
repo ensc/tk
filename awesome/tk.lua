@@ -30,6 +30,7 @@ local MAX_QUEUE_PER_RUN = 20
 
 function tk.init()
     self = {
+	rules		= {},
 	get_idle	= x11_idle(),
 	event		= event,
 	connect_signals	= connect_signals,
@@ -96,25 +97,43 @@ end
 
 function connect_signals(self, client)
     client.connect_signal("manage", function (c, startup)
-			      self.event(self, "manage", c)
-			      self._names[c.pid] = c.name
+			      self._clients[c.window] = {
+				  name	= c.name,
+				  skipped = skip_window(self, c, true)
+			      }
+
+			      if _check_client(self, c) then
+				  self.event(self, "manage", c)
+			      end
 				    end)
 
     client.connect_signal("unmanage", function (c, startup)
-			      self._names[c.pid] = nil
+			      if _check_client(self, c) then
+				  self.event(self, "unmanage", c)
+			      end
+
+			      self._clients[c.window] = nil
 				      end)
 
     client.connect_signal("focus", function(c)
-			      self.event(self, "focus", c)
+			      if _check_client(self, c) then
+				  self.event(self, "focus", c)
+			      end
 				   end)
 
     client.connect_signal("unfocus", function(c)
-			      self.event(self, "unfocus", c)
+			      if _check_client(self, c) then
+				  self.event(self, "unfocus", c)
+			      end
 				     end)
 
     client.connect_signal("property::name", function(c)
-			      if self._names[c.pid] ~= c.name then
-				  self._names[c.pid] = c.name
+			      if not _check_client(self, c) then
+				  -- noop
+			      elseif self._clients[c.window].name == c.name then
+				  -- noop
+			      elseif skip_window(self, c, false) then
+				  self._clients[c.window].name = c.name
 				  self.event(self, "name", c)
 			      end
 					    end)
@@ -122,6 +141,25 @@ end
 
 
 -- private API
+
+function _check_client(self, c)
+    id = c.window
+    return self._clients[id] and not self._clients[id].skipped
+end
+
+function skip_window(self, c, is_new)
+    for i, info in ipairs(self.rules) do
+	if info.class and not string.match(c.class, info.class) then
+	    -- noop
+	elseif info.name and not string.match(c.name, info.name) then
+	    -- noop
+	else
+	    return true
+	end
+    end
+
+    return false
+end
 
 function check_idle(self)
     idle_tm = self.get_idle()
