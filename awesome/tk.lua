@@ -294,8 +294,6 @@ function _process_queue_item(self)
 	    _serialize_string(e[3].name) ..
 	    _serialize_string(e[3].class)
     elseif op == 'name' then
-	print("--")
-	d(e)
 	code = 'N'
 	t = _serialize_u32(e[3].pid) ..
 	    _serialize_string(e[3].name)
