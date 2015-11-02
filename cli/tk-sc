@@ -1,0 +1,242 @@
+#! /usr/bin/python3
+
+# Copyright (C) 2015 Enrico Scholz <enrico.scholz@sigma-chemnitz.de>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; version 3 of the License.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+import netrc
+import pycurl
+import tempfile
+import time
+import urllib.parse
+import sys
+import os
+
+exec(open(os.getenv("HOME") + "/.config/tk.conf").read())
+
+NOW = time.localtime()
+
+class TimeSpan:
+    def __init__(self, v):
+        (self.__start, self.__end) = TimeSpan.parse(v)
+
+    def str_start(self):
+        return TimeSpan._fmt_colon(self.__start)
+
+    def str_end(self):
+        return TimeSpan._fmt_colon(self.__end)
+
+    def str_duration(self):
+        return TimeSpan._fmt_comma(self.__end - self.__start)
+
+    @staticmethod
+    def _fmt_colon(n):
+        return "%02u:%02u" % (n / 60, n % 60)
+
+    def _fmt_comma(v):
+        return "%u,%02u" % (v / 60, int((v % 60) / 60 * 100))
+
+    @staticmethod
+    def _parse(e):
+        if e.find(':') >= 0:
+            # assume HH:MM format
+            t = list(map(lambda x: int(x or "0"), e.split(':', 2)))
+            res = t[0] * 60 + t[1]
+        elif e.find(',') >= 0:
+            t = list(map(lambda x: int(x or "0"), e.split(',', 2)))
+            res = t[0] * 60 + float("0.%u" % t[1]) * 60
+        elif e.find('.') >= 0:
+            t = list(map(lambda x: int(x or "0"), e.split('.', 2)))
+            res = t[0] * 60 + float("0.%u" % t[1]) * 60
+        else:
+            res = int(e) * 60
+
+        return res
+
+    @staticmethod
+    def parse(span):
+        p = span.find('-')
+        if p > 0:
+            start = TimeSpan._parse(span[:p])
+            end   = TimeSpan._parse(span[p+1:])
+            p     = -1
+        else:
+            p = span.find('+')
+
+        if p >= 0:
+            if p == 0:
+                start = 0
+            else:
+                start = TimeSpan._parse(span[:p])
+
+            end   = start + TimeSpan._parse(span[p+1:])
+            p     = -1
+        else:
+            p     = 0
+
+        if p == 0:
+            start = 0
+            end   = start + TimeSpan._parse(span)
+
+        return (start, end)
+
+class Date:
+    def __init__(self, v):
+        self.__date = Date.parse(v)
+
+    def str(self):
+        return time.strftime("%d.%m.%Y", time.localtime(self.__date))
+
+    @staticmethod
+    def _parse(d):
+        parts = d.split('.')
+        if parts[-1] == '':
+            parts = parts[:-1]
+
+        parts = list(map(lambda x: int(x), parts))
+
+        if len(parts) == 1:
+            return (NOW[0], NOW[1], parts[0])
+        elif len(parts) == 2:
+            return (NOW[0], parts[1], parts[0])
+        elif len(parts) == 2:
+            return (parts[2], parts[1], parts[0])
+        else:
+            raise Exception("bad time %s" % d)
+
+    @staticmethod
+    def parse(d):
+        (year, month, day) = Date._parse(d)
+        return time.mktime((year, month, day,
+                            0, 0, 0,
+                            0, 0, -1))
+
+class DataSet:
+    def __init__(self, project, date, span, desc, notes = None):
+        self.__project = PROJECTS[project]
+        self.__date    = Date(date)
+        self.__span    = TimeSpan(span)
+        self.__desc    = desc
+        self.__notes   = notes or ""
+
+    def url_data(self):
+        return {
+            "Date" : self.__date.str(),
+            "From" : self.__span.str_start(),
+            "To"   : self.__span.str_end(),
+            "Effort" : self.__span.str_duration(),
+            "Break" : "",
+            "InternalComments" : self.__notes,
+            "ExternalComments" : self.__desc,
+        }
+
+    def get_project(self):
+        return self.__project
+
+    def url(self, base):
+        return base + self.__project
+
+class HttpHeader:
+    def __init__(self):
+        self.reset()
+
+    def get(self, id):
+        return self.__hdrs.get(id.lower(), None)
+
+    def reset(self):
+        self.__hdrs = {}
+        self.__status = None
+
+    def write(self, s):
+        l = len(s)
+        s = s.strip()
+        if s.startswith(b"HTTP/"):
+            status = s[5:].split(b' ', 2)
+
+            self.__status = (status[0], int(status[1]), status[2])
+        elif s == b'':
+            pass
+        else:
+            (key,val) = s.split(b':', 1)
+            val = val.strip()
+            key = key.lower()
+
+            if key in self.__hdrs:
+                self.__hdrs[key].append(val)
+            else:
+                self.__hdrs[key] = [val,]
+
+        return l
+
+    def is_redirection(self):
+        return self.__status[1] == 302
+
+    def get_redirection(self, base):
+        v = self.get(b'Location')[0]
+        if v.startswith(b'/') or v.startswith(b'./') or v.startswith(b'../'):
+            res = base.encode() + v
+        else:
+            res = v
+
+        return res
+
+
+
+
+args = sys.argv + [None,]
+
+data = DataSet(args[1], args[2], args[3], args[4], args[5])
+
+print(data.get_project(), data.url_data())
+
+raise Exception("X")
+
+cookiefile = tempfile.NamedTemporaryFile()
+
+auth = netrc.netrc().authenticators(url[8:-1])
+hdr  = HttpHeader()
+
+c = pycurl.Curl()
+c.setopt(c.URL, url + "Login")
+c.setopt(c.VERBOSE, 0)
+c.setopt(c.COOKIEFILE, cookiefile.name)
+c.setopt(c.COOKIEJAR, cookiefile.name)
+c.setopt(c.WRITEFUNCTION, lambda x: None)
+c.setopt(c.HEADERFUNCTION, hdr.write)
+
+# get session cookie
+hdr.reset()
+c.perform()
+assert(c.getinfo(c.HTTP_CODE) == 200)
+
+info = urllib.parse.urlencode({ "UserName" : auth[1],
+                                "Password" : auth[2] })
+c.setopt(c.POST, 1)
+c.setopt(c.POSTFIELDS, info)
+
+# get login cookie
+hdr.reset()
+c.perform()
+assert(c.getinfo(c.HTTP_CODE) in [200, 302])
+
+c.setopt(c.URL, data.url(url + "/Times/AddPlanned/"))
+c.setopt(c.POST, 1)
+c.setopt(c.VERBOSE, 0)
+c.setopt(c.POSTFIELDS, urllib.parse.urlencode(data.url_data()))
+
+hdr.reset()
+c.perform()
+if hdr.is_redirection():
+    print("Submitted", hdr.get_redirection(url).decode('ascii'))
+
+assert(c.getinfo(c.HTTP_CODE) in [200, 302])

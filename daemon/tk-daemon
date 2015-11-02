@@ -1,0 +1,349 @@
+#! /usr/bin/python3
+
+# Copyright (C) 2015 Enrico Scholz <enrico.scholz@sigma-chemnitz.de>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; version 3 of the License.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+import socketserver
+import socket
+import sys
+import os
+import struct
+import sqlite3
+import threading
+import time
+
+class NetItem:
+    def __init__(self, name):
+        self.__name = name
+        self.__is_fixed = False
+
+    @staticmethod
+    def unpack_rest(fmt, data):
+        s   = struct.Struct(fmt)
+        res = s.unpack(data[:s.size])
+        return res + (data[s.size:],)
+
+    @staticmethod
+    def unpack_string(data):
+        (l,) = struct.unpack(">L", data[:4])
+        (s,) = struct.unpack_from(">%ds" % l, data, 4)
+        return (s, data[l+4:])
+
+    def sql_create_table(self):
+        return "%s %s" % (self.__name, self.sql_type())
+
+    def sql_placeholder(self):
+        return ":%s" % (self.__name)
+
+    def sql_get_name(self):
+        return self.__name
+
+class NetFixed(NetItem):
+    def __init__(self, name, type, value):
+        NetItem.__init__(self, name)
+        self.__type  = type
+        self.__value = value
+
+    def unpack(self, data):
+        return (self.__value, data)
+
+    def sql_type(self):
+        return self.__type
+
+class NetString(NetItem):
+    def __init__(self, name):
+        NetItem.__init__(self, name)
+
+    def unpack(self, data):
+        return NetItem.unpack_string(data)
+
+    def sql_type(self):
+        return 'TEXT'
+
+class NetUInt32(NetItem):
+    def __init__(self, name):
+        NetItem.__init__(self, name)
+
+    def unpack(self, data):
+        return NetItem.unpack_rest(">L", data)
+
+    def sql_type(self):
+        return 'INTEGER'
+
+class NetUInt64(NetItem):
+    def __init__(self, name):
+        NetItem.__init__(self, name)
+
+    def unpack(self, data):
+        return NetItem.unpack_rest(">Q", data)
+
+    def sql_type(self):
+        return 'INTEGER'
+
+class NetBoolean(NetItem):
+    def __init__(self, name):
+        NetItem.__init__(self, name)
+
+    def unpack(self, data):
+        (v, rest) = NetItem.unpack_rest(">c", data)
+        return (v != b'\x00', rest)
+
+    def sql_type(self):
+        return 'INTEGER'
+
+class Table:
+    def __init__(self, name, attrs):
+        self.__name = name
+        self.__attr = attrs
+
+        _attrs = [
+            NetFixed('tm',   'INTEGER', None),
+            NetFixed('_tid', 'INTEGER', None),
+        ]
+        _attrs.extend(attrs)
+
+        self.__query_insert = ("INSERT INTO %s VALUES(" % self.__name +
+                               ','.join(map(lambda item: item.sql_placeholder(),
+                                            _attrs)) + ")")
+        self.__query_create = ("CREATE TABLE IF NOT EXISTS %s (" % (self.__name,) +
+                               ','.join(map(lambda item: item.sql_create_table(),
+                                            _attrs)) + ")")
+
+        self.reset()
+
+    def create(self, c):
+        if not self.__created:
+            c.execute(self.__query_create)
+            self.__created = True
+
+
+    def write(self, tid, c, attrs):
+        self.create(c)
+        tmp = { '_tid' : tid }
+        tmp.update(attrs)
+        c.execute(self.__query_insert, tmp)
+
+    def reset(self):
+        self.__created = False
+
+    def read_net(self, data):
+        res = {}
+        for a in self.__attr:
+            try:
+                (v, data) = a.unpack(data)
+            except:
+                print("failed to unpack %s(%s)" % (a, a.sql_get_name()))
+                raise
+            res[a.sql_get_name()] = v
+        assert(len(data) == 0)
+
+        return res
+
+class Event:
+    def __init__(self, tm, data):
+        self.__attr = self.table.read_net(data)
+        self.__attr['tm'] = tm
+
+    def get_params(self):
+        return self.__attr
+
+class EventUnFocus(Event):
+    table = Table('focus',
+                  [ NetFixed('focus', 'INTEGER', 0),
+                    NetUInt32('pid'),
+                    NetString('name'),
+                    NetString('class') ])
+
+class EventFocus(Event):
+    table = Table('focus',
+                  [ NetFixed('focus', 'INTEGER', 1),
+                    NetUInt32('pid'),
+                    NetString('name'),
+                    NetString('class') ])
+
+class EventManage(Event):
+    table = Table('manage',
+                  [ NetUInt32('pid'),
+                    NetString('name'),
+                    NetString('class') ])
+
+class EventName(Event):
+    table = Table('window_name',
+                  [ NetUInt32('pid'),
+                    NetString('name') ])
+
+class EventConnect(Event):
+    table = Table('connect',
+                  [ NetUInt32('pid'),
+                    NetString('id') ])
+
+class EventDropped(Event):
+    table = Table('dropped',
+                  [ NetUInt32('count') ])
+
+class EventIdle(Event):
+    table = Table('idle',
+                  [ NetFixed('idle', 'INTEGER', 1) ])
+
+class EventResume(Event):
+    table = Table('idle',
+                  [ NetFixed('idle', 'INTEGER', 0) ])
+
+class EventBufferEnter(Event):
+    table = Table('buffer',
+                  [ NetFixed('enter', 'INTEGER', 1),
+                    NetString('name'),
+                    NetString('file'),
+                    NetUInt32('size'),
+                    NetBoolean('modified') ])
+
+class EventBufferLeave(Event):
+    table = Table('buffer',
+                  [ NetFixed('enter', 'INTEGER', 0),
+                    NetString('name'),
+                    NetString('file'),
+                    NetUInt32('size'),
+                    NetBoolean('modified') ])
+
+class NetHandler(socketserver.BaseRequestHandler):
+    _events = {
+        b'f':	EventUnFocus,
+        b'F':	EventFocus,
+        b'M':	EventManage,
+        b'N':	EventName,
+        b'C':	EventConnect,
+        b'D':	EventDropped,
+        b'I':	EventIdle,
+        b'i':	EventResume,
+        b'B':	EventBufferEnter,
+        b'b':	EventBufferLeave,
+    }
+
+    def __init__(self, sock, mode, server):
+        self.__server = server
+        self.__id = server.create_id()
+        socketserver.BaseRequestHandler.__init__(self, sock, mode, server)
+
+    def get_id(self):
+        return self.__id
+
+    def handle(self):
+        while True:
+            (data, tmp, tmp, tmp) = self.request.recvmsg(4, 0, socket.MSG_WAITALL)
+            if len(data) == 0:
+                break
+
+            (l,)    = struct.unpack(">L", data)
+            (data, tmp, tmp, tmp) = self.request.recvmsg(l, 0, socket.MSG_WAITALL)
+            if len(data) != l:
+                raise Exception("bad length %d vs. %d" % (len(data), l))
+
+            (op, tm, data) = NetItem.unpack_rest(">cQ", data)
+            ev_class = self._events.get(op, None)
+            if ev_class == None:
+                print("Unsupported operation %s" % (op,))
+                continue
+
+            ev = ev_class(tm, data)
+            self.__server.log_event(self, ev)
+
+class Lock:
+    def __init__(self, lock):
+        self.__lock = lock
+        self.__is_locked = False
+
+    def __enter__(self):
+        assert(not self.__is_locked)
+        return self
+
+    def __exit__(self, type, value, tb):
+        if self.__is_locked:
+            self.__lock.release()
+
+    def lock(self):
+        assert(not self.__is_locked)
+        self.__lock.acquire()
+        self.__is_locked = True
+
+    def unlock(self):
+        assert(self.__is_locked)
+        self.__lock.release()
+        self.__is_locked = False
+
+class LogServer(socketserver.ThreadingMixIn):
+    def log_event(self, handler, event):
+        with Lock(self.__dblock) as lock:
+            lock.lock()
+            if self.__db == None:
+                self.__db = sqlite3.connect("%s/tk%s_%u.sqlite" %
+                                            (self.__dbdir,
+                                             time.strftime("%Y%m%d_%H%M%S"),
+                                             os.getpid()),
+                                            check_same_thread=False)
+
+                for t in self.__tables:
+                    t.reset()
+
+            c = self.__db.cursor()
+            self.__tables.add(event.table)
+            event.table.write(handler.get_id(), c, event.get_params())
+            self.__db.commit()
+
+    def set_dbdir(self, dir):
+        self.__db     = None
+        self.__dbdir  = dir
+        self.__dblock = threading.Lock()
+        self.__tables = set()
+
+    def create_id(self):
+        with Lock(self.__dblock) as lock:
+            lock.lock()
+            try:
+                v = self.__id_cnt
+            except:
+                v = 0
+
+            self.__id_cnt = v+1
+
+        return v
+
+class ThreadedTCPServer(socketserver.UnixStreamServer, LogServer):
+    pass
+
+class SystemdSocketServer(socketserver.TCPServer, LogServer):
+    def __init__(self, server_address, RequestHandlerClass, bind_and_activate=True):
+        socketserver.BaseServer.__init__(self, server_address, RequestHandlerClass)
+        self.socket = socket.fromfd(server_address,
+                                    socket.AF_UNIX, socket.SOCK_STREAM)
+        assert(bind_and_activate)
+
+    def server_bind(self):
+        raise Exception("not applicable")
+
+    def server_activate(self):
+        raise Exception("not applicable")
+
+if __name__ == '__main__':
+    if os.environ.get('LISTEN_PID', None) == str(os.getpid()):
+        del os.environ["LISTEN_PID"]
+        del os.environ["LISTEN_FDS"]
+        server = SystemdSocketServer(3, NetHandler)
+    else:
+        id = sys.argv[1]
+        server = ThreadedTCPServer(sys.argv[1], NetHandler)
+
+    server.set_dbdir(sys.argv[2])
+    server.allow_reuse_address = True
+
+    server.serve_forever(5)
