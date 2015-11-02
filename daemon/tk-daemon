@@ -230,6 +230,7 @@ class NetHandler(socketserver.BaseRequestHandler):
         b'f':	EventUnFocus,
         b'F':	EventFocus,
         b'M':	EventManage,
+        b'm':	EventUnManage,
         b'N':	EventName,
         b'C':	EventConnect,
         b'D':	EventDropped,
