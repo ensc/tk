@@ -40,8 +40,9 @@
     (:modified u8)))
 
 (defconst ensc/_tk-event-connect
-  '((:pid u32)
-    (:id  struct ensc/_tk-event-string-spec)))
+  '((:pid     u32)
+    (:id      struct ensc/_tk-event-string-spec)
+    (:detail  struct ensc/_tk-event-string-spec)))
 
 (defun ensc/_tk-pack-string (str)
   "Pack a string"
@@ -69,8 +70,9 @@
 
 (defun ensc/_tk-pack-connect ()
   (bindat-pack ensc/_tk-event-connect
-	       `((:pid . ,(emacs-pid))
-		 (:id  . ,(ensc/_tk-pack-string "emacs")))))
+	       `((:pid    . ,(emacs-pid))
+		 (:id     . ,(ensc/_tk-pack-string "emacs"))
+		 (:detail . ,(ensc/_tk-pack-string "")))))
 
 (defun ensc/_tk-pack-event (code &rest args)
   "Pack an event"
