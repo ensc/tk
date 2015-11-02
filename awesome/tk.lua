@@ -17,6 +17,8 @@ local posix = require("posix")
 local tk = {}
 local d = require 'pl.pretty'.dump
 
+require("x11")
+
 local capi = {
     client = client,
     root = root,
@@ -28,6 +30,7 @@ local MAX_QUEUE_PER_RUN = 20
 
 function tk.init()
     self = {
+	get_idle	= x11_idle(),
 	event		= event,
 	connect_signals	= connect_signals,
 	reset_idle	= reset_idle,
@@ -59,12 +62,9 @@ function tk.init()
 	_outbuf		= nil,
 	_send		= nil,
 	_idle		= {
-	    timer	= timer({ timeout = 3 }),
-	    last_x	= -1,
-	    last_y	= -1,
-	    last_tm	= -1,
-	    timeout	= 10,
-	    is_idle	= false,
+	    timer		= timer({ timeout = 3 }),
+	    timeout		= 10,
+	    is_idle		= false,
 	},
 
 	_names		= { },
@@ -77,6 +77,7 @@ function tk.init()
 
     self.thread = coroutine.create(function () loop(self) end)
     self._idle.timer:connect_signal("timeout", function () check_idle(self) end)
+    self._idle.timer:start()
     reset_idle(self)
     return self
 end
@@ -90,7 +91,7 @@ function event(self, id, c)
 end
 
 function reset_idle(self)
-    _reset_idle(self, mouse.coords(), os.time())
+    _reset_idle(self)
 end
 
 function connect_signals(self, client)
@@ -123,34 +124,28 @@ end
 -- private API
 
 function check_idle(self)
-    -- print("check_idle")
-    c = mouse.coords()
-    now = os.time()
-    if c.x ~= self._idle.last_x or c.y ~= self._idle.last_y then
-	-- print("  moved")
-	reset_idle(self, c, now)
-	return
-    end
+    idle_tm = self.get_idle()
+    is_idle = (idle_tm > self._idle.timeout)
 
-    if now > self._idle.last_tm + self._idle.timeout then
-	-- print("  idle")
+    -- print("check_idle", self.get_idle(), is_idle)
+
+    if is_idle == self._idle.is_idle then
+	-- noop
+    elseif is_idle then
+	-- print("going idle")
 	_enqueue(self, "idle", nil)
-	self._idle.timer:stop()
 	self._idle.is_idle = true
+    else
+	_reset_idle(self)
     end
 end
 
-function _reset_idle(self, c, tm)
+function _reset_idle(self)
     if self._idle.is_idle then
 	_enqueue(self, "resume", nil)
+	coroutine.resume(self.thread)
 	self._idle.is_idle = false
     end
-
-    self._idle.last_x = c.x
-    self._idle.last_y = c.y
-    self._idle.last_tm = tm
-
-    self._idle.timer:again()
 end
 
 function _serialize_u64(v)
