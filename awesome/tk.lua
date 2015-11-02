@@ -34,7 +34,6 @@ function tk.init()
 	get_idle	= x11_idle(),
 	event		= event,
 	connect_signals	= connect_signals,
-	reset_idle	= reset_idle,
 	connect_fn	= function(self)
 	    if self.sock_path ~= nil then
 		require("socket.unix")
