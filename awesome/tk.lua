@@ -280,13 +280,15 @@ function _process_queue_item(self)
     op = e[1]
 
     t = ''
-    if op == 'focus' or op == 'unfocus' or op == 'manage' then
+    if op == 'focus' or op == 'unfocus' or op == 'manage' or op == 'unmanage' then
 	if op == 'focus' then
 	    code = 'F'
 	elseif op == 'unfocus' then
 	    code = 'f'
 	elseif op == 'manage' then
 	    code = 'M'
+	elseif op == 'unmanage' then
+	    code = 'm'
 	end
 	t = _serialize_u32(e[3].pid) ..
 	    _serialize_string(e[3].name) ..
