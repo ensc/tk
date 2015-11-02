@@ -235,6 +235,8 @@
     (cancel-timer timer-object))
 
   (setq ensc/tk-idle-timer-list nil)
+  (ensc/_tk-network-kill)
+  (setq ensc/_tk-in-send nil)
   t)
 
 ; (ensc/tk-start)
