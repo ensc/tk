@@ -174,7 +174,15 @@ class EventFocus(Event):
 
 class EventManage(Event):
     table = Table('manage',
-                  [ NetUInt32('pid'),
+                  [ NetFixed('manage', 'INTEGER', 1),
+                    NetUInt32('pid'),
+                    NetString('name'),
+                    NetString('class') ])
+
+class EventUnManage(Event):
+    table = Table('manage',
+                  [ NetFixed('manage', 'INTEGER', 0),
+                    NetUInt32('pid'),
                     NetString('name'),
                     NetString('class') ])
 
