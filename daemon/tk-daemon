@@ -328,10 +328,10 @@ class LogServer(socketserver.ThreadingMixIn):
 
         return v
 
-class ThreadedTCPServer(socketserver.UnixStreamServer, LogServer):
+class ThreadedTCPServer(LogServer, socketserver.UnixStreamServer):
     pass
 
-class SystemdSocketServer(socketserver.TCPServer, LogServer):
+class SystemdSocketServer(LogServer, socketserver.TCPServer):
     def __init__(self, server_address, RequestHandlerClass, bind_and_activate=True):
         socketserver.BaseServer.__init__(self, server_address, RequestHandlerClass)
         self.socket = socket.fromfd(server_address,
