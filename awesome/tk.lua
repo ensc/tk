@@ -300,7 +300,8 @@ function _process_queue_item(self)
     elseif op == '_conn' then
 	code = 'C'
 	t = _serialize_u32(posix.getpid().pid) ..
-	    _serialize_string("awesome")
+	    _serialize_string("awesome") ..
+	    _serialize_string(os.getenv('DISPLAY'))
     elseif op == '_dropped' then
 	code = 'D'
 	t    = _serialize_u32(e[3].count)
