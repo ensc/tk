@@ -67,7 +67,7 @@ function tk.init()
 	    is_idle		= false,
 	},
 
-	_names		= { },
+	_clients	= { },
     }
 
     rdir = os.getenv("XDG_RUNTIME_DIR")
