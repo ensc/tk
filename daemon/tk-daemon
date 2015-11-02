@@ -194,7 +194,8 @@ class EventName(Event):
 class EventConnect(Event):
     table = Table('connect',
                   [ NetUInt32('pid'),
-                    NetString('id') ])
+                    NetString('id'),
+                    NetString('detail') ])
 
 class EventDropped(Event):
     table = Table('dropped',
