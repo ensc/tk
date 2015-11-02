@@ -13,6 +13,7 @@
 ;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 (require 'bindat)
+(require 'cl)
 
 (defcustom ensc/tk-idle-timer-limit 120
   "idle timeout in seconds")
