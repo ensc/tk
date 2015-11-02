@@ -23,6 +23,7 @@
 (defvar ensc/_tk-buffer-updated-timer nil)
 (defvar ensc/_tk-events nil)
 (defvar ensc/_tk-network nil)
+(defvar ensc/_tk-in-send nil)
 
 (defconst ensc/_tk-event-hdr-spec
   '((:code u8)
@@ -86,14 +87,16 @@
       (message "Unknown event %s" code)
       nil)))
 
-(defun ensc/_tk-network-process-p ()
-  (and ensc/_tk-network
-       (process-live-p ensc/_tk-network)))
+(defun ensc/_tk-network-process-p (&optional proc)
+  (let ((proc (or proc ensc/_tk-network)))
+    (and proc
+	 (process-live-p proc))))
 
 (defun ensc/_tk-network-kill ()
-  (when (ensc/_tk-network-process-p)
-    (kill-process ensc/_tk-network)
-    (setq ensc/_tk-network nil)))
+  (let ((p ensc/_tk-network))
+    (setq ensc/_tk-network nil)
+    (when (ensc/_tk-network-process-p p)
+      (delete-process p))))
 
 (defun ensc/_tk-network-change (process event)
   (cond
@@ -107,7 +110,8 @@
    (t
     (progn
       (message "event: %s" event)
-      (ensc/_tk-network-kill)))))
+      (when (eq process ensc/_tk-network)
+	(ensc/_tk-network-kill))))))
 
 (defun ensc/_tk-network-connect ()
   (condition-case nil
@@ -122,17 +126,27 @@
        :noquery t)
     nil))
 
+(defun ensc/_tk-trigger-send-inner ()
+  (let ((msg (car ensc/_tk-events)))
+    ; (message "sending data %s" msg)
+    (process-send-string ensc/_tk-network msg)
+    (pop ensc/_tk-events)))
+
 (defun ensc/_tk-trigger-send ()
-  (unless (ensc/_tk-network-process-p)
-    (ensc/_tk-network-connect))
-  (while (and ensc/_tk-events (ensc/_tk-network-process-p))
-    (condition-case nil
-	(let ((msg (car ensc/_tk-events)))
-	  ; (message "sending data %s" msg)
-	  (process-send-string ensc/_tk-network msg)
-	  (pop ensc/_tk-events))
-      (error
-       (ensc/_tk-network-kill)))))
+  (unless ensc/_tk-in-send
+    ;; TODO: is there a race?
+    (setq ensc/_tk-in-send t)
+    (condition-case err
+	(progn
+	  (unless (ensc/_tk-network-process-p)
+	    (ensc/_tk-network-connect))
+	  (while (and ensc/_tk-events (ensc/_tk-network-process-p))
+	    (ensc/_tk-trigger-send-inner)))
+	(error
+	 (progn
+	   (error-message-string err)
+	   (ensc/_tk-network-kill))))
+    (setq ensc/_tk-in-send nil)))
 
 (defun ensc/_tk-enqueue-event (code tm data)
   "Enqueue an event"
