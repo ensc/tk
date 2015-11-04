@@ -135,9 +135,10 @@ class DataSet:
             "From" : self.__span.str_start(),
             "To"   : self.__span.str_end(),
             "Effort" : self.__span.str_duration(),
-            "Break" : "",
+            "Break" : 0,
             "InternalComments" : self.__notes,
             "ExternalComments" : self.__desc,
+            "NotInvoicable" : 0,
         }
 
     def get_project(self):
