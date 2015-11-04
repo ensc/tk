@@ -146,11 +146,15 @@ function _check_client(self, c)
     return self._clients[id] and not self._clients[id].skipped
 end
 
+function _string_not_match(a, b)
+    return a and b and not string.match(a, b)
+end
+
 function skip_window(self, c, is_new)
     for i, info in ipairs(self.rules) do
-	if info.class and not string.match(c.class, info.class) then
+	if _string_not_match(c.class, info.class) then
 	    -- noop
-	elseif info.name and not string.match(c.name, info.name) then
+	elseif _string_not_match(c.name, info.name) then
 	    -- noop
 	else
 	    return true
