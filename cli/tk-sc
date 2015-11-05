@@ -109,7 +109,7 @@ class Date:
             return (NOW[0], NOW[1], parts[0])
         elif len(parts) == 2:
             return (NOW[0], parts[1], parts[0])
-        elif len(parts) == 2:
+        elif len(parts) == 3:
             return (parts[2], parts[1], parts[0])
         else:
             raise Exception("bad time %s" % d)
