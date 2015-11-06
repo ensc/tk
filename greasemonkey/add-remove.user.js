@@ -6,8 +6,85 @@
 // @grant       none
 // ==/UserScript==
 var FIXUP_MARKER = "ensc-fixup";
+var REMOVE_METHOD = 0;
 
-function _remove_data(key)
+function _remove_data_form(doc, uri)
+{
+    var f = null;
+
+    for (var i = 0; i < doc.forms.length; ++i) {
+	var f = doc.forms[i];
+
+	if (f.action.search(uri) >= 0 && f.method == "post")
+	    break;
+    }
+
+    if (!f) {
+	alert("expected formular not found!");
+	return;
+    }
+
+    f.elements['From']             = "00:00";
+    f.elements['To']               = "00:00";
+    f.elements['Effort']           = "0";
+    f.elements['NotInvoiceable']   = "0";
+    f.elements['InternalComments'] = "0";
+    f.elements['ExternalComments'] = "***";
+
+    // TODO: why does 'f.submit()' not work here?
+
+    var data = new FormData();
+    for (var i = 0; i < f.elements.length; ++i) {
+	var e = f.elements[i];
+	if (e.name)
+	    data.append(e.name, e.value);
+    }
+
+    xhr = new XMLHttpRequest();
+    xhr.open("POST", uri);
+    xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+    xhr.setRequestHeader('Referer', doc.uri);
+
+    xhr.addEventListener("error", function(ev) {
+	alert("Error: " + ev);
+    });
+
+    xhr.onreadystatechange = function () {
+        if (xhr.readyState == 4) {
+	    if (xhr.status != 200) {
+		alert("Failed to submit data: " + xhr.statusText);
+		return;
+	    }
+
+	    // alert("form submitted");
+	}
+    };
+
+    xhr.send(data);
+}
+
+function _remove_data_complex(key)
+{
+    var uri = "/Times/Edit/" + encodeURIComponent(key);
+    var xhr = new XMLHttpRequest();
+
+    xhr.open("GET", uri, true);
+    xhr.onreadystatechange = function () {
+        if (xhr.readyState == 4) {
+	    if (xhr.status != 200) {
+		alert("Failed to get form: " + xhr.statusText);
+		return;
+	    }
+
+	    _remove_data_form(xhr.responseXML, uri);
+        }
+    };
+    xhr.responseType = "document";
+    xhr.send();
+    return;
+}
+
+function _remove_data_simple(key)
 {
     var xhr = new XMLHttpRequest();
     var data = new FormData();
@@ -54,8 +131,18 @@ function handle_tbody(tr)
 
     var btn = document.createElement("button");
     btn.addEventListener("click", function() {
-	if (confirm("Really?"))
-	    _remove_data(data_key);
+	if (confirm("Really?")) {
+	    switch (REMOVE_METHOD) {
+	    case 0:
+		_remove_data_simple(data_key);
+		break;
+	    case 1:
+		_remove_data_complex(data_key);
+		break;
+	    default:
+		assert(false);
+	    }
+	}
 
 	return true;
     });
