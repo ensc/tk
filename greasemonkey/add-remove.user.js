@@ -13,13 +13,11 @@ function _remove_data(key)
     var data = new FormData();
     var now = new Date();
     var fields = {
-	"fieldset"	: "00000000-0000-0000-0000-000000000000",
-	"button"	: "00000000-0000-0000-0000-000000000000",
-	"submit"	: "00000000-0000-0000-0000-000000000000",
-	"datetime"	: "01." + (now.getMonth() + 1) + "." + now.getFullYear(),
+	"Break"		: "0",
+	"Date"		: "01." + (now.getMonth() + 1) + "." + now.getFullYear(),
+	"Effort"	: "0",
 	"From"		: "00:00",
 	"To"		: "00:00",
-	"Effort"	: "0",
 	"NotInvoiceable"	: "0",
 	"InternalComments"	: "",
 	"ExternalComments"	: "***",
