@@ -48,7 +48,6 @@ function _remove_data_form(doc, uri)
 
     xhr = new XMLHttpRequest();
     xhr.open("POST", uri);
-    xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
     xhr.setRequestHeader('Referer', doc.uri);
 
     xhr.addEventListener("error", function(ev) {
