@@ -200,7 +200,7 @@ data = DataSet(args[1], args[2], args[3], args[4], args[5])
 
 print(data.get_project(), data.url_data())
 
-raise Exception("X")
+#raise Exception("X")
 
 cookiefile = tempfile.NamedTemporaryFile()
 
