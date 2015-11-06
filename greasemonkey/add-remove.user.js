@@ -8,6 +8,16 @@
 var FIXUP_MARKER = "ensc-fixup";
 var REMOVE_METHOD = 0;
 
+var DEL_FIELDS = {
+    "Effort"		: "0",
+    "From"		: "00:00",
+    "To"		: "00:00",
+    "NotInvoiceable"	: "0",
+    "InternalComments"	: "",
+    "ExternalComments"	: "***",
+    "Break"		: "0",
+};
+
 function _remove_data_form(doc, uri)
 {
     var f = null;
@@ -24,12 +34,8 @@ function _remove_data_form(doc, uri)
 	return;
     }
 
-    f.elements['From']             = "00:00";
-    f.elements['To']               = "00:00";
-    f.elements['Effort']           = "0";
-    f.elements['NotInvoiceable']   = "0";
-    f.elements['InternalComments'] = "0";
-    f.elements['ExternalComments'] = "***";
+    for (df in DEL_FIELDS)
+	f.elements[df].value = DEL_FIELDS[df];
 
     // TODO: why does 'f.submit()' not work here?
 
@@ -89,19 +95,11 @@ function _remove_data_simple(key)
     var xhr = new XMLHttpRequest();
     var data = new FormData();
     var now = new Date();
-    var fields = {
-	"Break"		: "0",
-	"Date"		: "01." + (now.getMonth() + 1) + "." + now.getFullYear(),
-	"Effort"	: "0",
-	"From"		: "00:00",
-	"To"		: "00:00",
-	"NotInvoiceable"	: "0",
-	"InternalComments"	: "",
-	"ExternalComments"	: "***",
-    }
 
-    for (f in fields)
-	data.append(f, fields[f]);
+    for (f in DEL_FIELDS)
+	data.append(f, DEL_FIELDS[f]);
+
+    data.append('Date', "01." + (now.getMonth() + 1) + "." + now.getFullYear());
 
     xhr.addEventListener("error", function(ev) {
 	alert("Error: " + ev);
