@@ -2,6 +2,7 @@
 // @name        add-remove
 // @namespace   tk
 // @include     https://tk-sc.intern.sigma-chemnitz.de/Employees/Details/*
+// @include     https://tk-ssc.intern.sigma-chemnitz.de/Employees/Details/*
 // @version     1
 // @grant       none
 // ==/UserScript==
