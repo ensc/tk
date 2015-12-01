@@ -114,18 +114,18 @@ function handle_colgroup(cols)
     var el = document.createElement("col");
     el.setAttribute("style", "width: 3em");
 
-    cols.insertBefore(el, cols.firstElementChild);
+    cols.appendChild(el);
 }
 
 function handle_thead(tr)
 {
-    tr.insertCell(0);
+    tr.insertCell(-1);
 }
 
 function handle_tbody(tr)
 {
     var data_key = tr.getAttribute("data-key");
-    var cell = tr.insertCell(0);
+    var cell = tr.insertCell(-1);
 
     var btn = document.createElement("button");
     btn.addEventListener("click", function() {
