@@ -85,7 +85,9 @@ end
 function event(self, id, c)
     tags = capi.root.tags()
 
-    _enqueue(self, id, { name = c.name, class = c.class, pid = c.pid })
+    _enqueue(self, id, { name = c.name, class = c.class, pid = c.pid,
+			 instance = c.instance,
+			 focused = (client.focus == c) })
     reset_idle(self)
     coroutine.resume(self.thread)
 end
@@ -131,7 +133,7 @@ function connect_signals(self, client)
 				  -- noop
 			      elseif self._clients[c.window].name == c.name then
 				  -- noop
-			      elseif skip_window(self, c, false) then
+			      elseif not skip_window(self, c, false) then
 				  self._clients[c.window].name = c.name
 				  self.event(self, "name", c)
 			      end
@@ -152,7 +154,9 @@ end
 
 function skip_window(self, c, is_new)
     for i, info in ipairs(self.rules) do
-	if _string_not_match(c.class, info.class) then
+	if info.is_new ~= nil and info.is_new ~= is_new then
+	    -- noop
+	elseif _string_not_match(c.class, info.class) then
 	    -- noop
 	elseif _string_not_match(c.name, info.name) then
 	    -- noop
@@ -211,6 +215,16 @@ function _serialize_string(v)
     end
 
     return string.pack(">s4", v)
+end
+
+function _serialize_bool(v)
+    if v then
+	d = 1
+    else
+	d = 0
+    end
+
+    return _serialize_u8(d)
 end
 
 function _enqueue(self, event, data)
@@ -296,11 +310,13 @@ function _process_queue_item(self)
 	end
 	t = _serialize_u32(e[3].pid) ..
 	    _serialize_string(e[3].name) ..
-	    _serialize_string(e[3].class)
+	    _serialize_string(e[3].class) ..
+	    _serialize_string(e[3].instance)
     elseif op == 'name' then
 	code = 'N'
 	t = _serialize_u32(e[3].pid) ..
-	    _serialize_string(e[3].name)
+	    _serialize_string(e[3].name) ..
+	    _serialize_bool(e[3].focused)
     elseif op == '_conn' then
 	code = 'C'
 	t = _serialize_u32(posix.getpid().pid) ..
