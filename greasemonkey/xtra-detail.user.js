@@ -3,7 +3,7 @@
 // @namespace   tk
 // @include     https://tk-sc.intern.sigma-chemnitz.de/Employees/Details/*
 // @include     https://tk-ssc.intern.sigma-chemnitz.de/Employees/Details/*
-// @version     1
+// @version     1.0.1
 // @grant       none
 // ==/UserScript==
 var FIXUP_MARKER = "ensc-fixup";
@@ -63,7 +63,7 @@ var DateEntry = function(row) {
 	var hour = content.substr(0,comma_pos);
 	var min  = content.substr(comma_pos+1,unit_pos - comma_pos);
 
-	return (Number(hour) * 60 + Number(min));
+	return Number(hour + '.' + min) * 60;
     };
 
     var tds = row.getElementsByTagName("td");
