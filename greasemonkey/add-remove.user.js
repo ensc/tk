@@ -3,7 +3,7 @@
 // @namespace   tk
 // @include     https://tk-sc.intern.sigma-chemnitz.de/Employees/Details/*
 // @include     https://tk-ssc.intern.sigma-chemnitz.de/Employees/Details/*
-// @version     1
+// @version     1.1
 // @grant       none
 // ==/UserScript==
 var FIXUP_MARKER = "ensc-fixup";
