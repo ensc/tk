@@ -163,33 +163,38 @@ class EventUnFocus(Event):
                   [ NetFixed('focus', 'INTEGER', 0),
                     NetUInt32('pid'),
                     NetString('name'),
-                    NetString('class') ])
+                    NetString('class'),
+                    NetString('instance') ])
 
 class EventFocus(Event):
     table = Table('focus',
                   [ NetFixed('focus', 'INTEGER', 1),
                     NetUInt32('pid'),
                     NetString('name'),
-                    NetString('class') ])
+                    NetString('class'),
+                    NetString('instance') ])
 
 class EventManage(Event):
     table = Table('manage',
                   [ NetFixed('manage', 'INTEGER', 1),
                     NetUInt32('pid'),
                     NetString('name'),
-                    NetString('class') ])
+                    NetString('class'),
+                    NetString('instance') ])
 
 class EventUnManage(Event):
     table = Table('manage',
                   [ NetFixed('manage', 'INTEGER', 0),
                     NetUInt32('pid'),
                     NetString('name'),
-                    NetString('class') ])
+                    NetString('class'),
+                    NetString('instance') ])
 
 class EventName(Event):
     table = Table('window_name',
                   [ NetUInt32('pid'),
-                    NetString('name') ])
+                    NetString('name'),
+                    NetBoolean('focus') ])
 
 class EventConnect(Event):
     table = Table('connect',
