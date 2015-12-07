@@ -123,6 +123,11 @@ class Date:
 
 class DataSet:
     def __init__(self, project, date, span, desc, notes = None):
+        if project not in PROJECTS:
+            print("No such project; available ones:" +
+                  '\n  '.join(sorted(PROJECTS.keys())) + '\n')
+            raise Exception("")
+
         self.__project = PROJECTS[project]
         self.__date    = Date(date)
         self.__span    = TimeSpan(span)
