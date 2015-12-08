@@ -32,6 +32,14 @@ function fixup_h1(h1, info, summary)
     });
     btn_summary.innerHTML = "S";
     h1.appendChild(btn_summary);
+
+
+    btn_srefresh = document.createElement("button");
+    btn_srefresh.addEventListener("click", function() {
+	summary.refresh();
+    });
+    btn_srefresh.innerHTML = "R";
+    h1.appendChild(btn_srefresh);
 }
 
 function fixup_element_single(el, fn)
@@ -88,7 +96,7 @@ var DateEntry = function(row) {
 
 	return tmp;
     }
-    
+
     this.date.isSameWeek = function(b) {
 	var tmp_a = this._addDay(-this.getDayMo());
 	var tmp_b = b._addDay(-b.getDayMo());
@@ -170,15 +178,6 @@ var Summary = function(table) {
 	var self = this;
 
 	this.__el.classList.add("grid");
-
-	var btn = document.createElement("button");
-
-	btn.addEventListener("click", function() {
-	    self.refresh();
-	});
-	btn.innerHTML = "R";
-
-	this.__el.appendChild(btn);
 	this.__el.appendChild(this.__content);
 
 	this.refresh()
