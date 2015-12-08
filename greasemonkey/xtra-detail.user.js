@@ -15,21 +15,23 @@ var DATE_FMT = new Intl.DateTimeFormat('de-DE', DATE_FMT_OPTS);
 
 function fixup_h1(h1, info, summary)
 {
-    var btn = document.createElement("button");
+    var btn_hide = document.createElement("button");
+    var btn_summary = document.createElement("button");
+    var btn_srefresh = document.createElement("button");
 
-    btn.addEventListener("click", function() {
+    btn_hide.addEventListener("click", function() {
 	info.hidden = !info.hidden;
     });
 
-    btn.innerHTML = "H";
-    h1.appendChild(btn);
+    btn_hide.innerHTML = "H";
+    h1.appendChild(btn_hide);
 
-    btn = document.createElement("button");
-    btn.addEventListener("click", function() {
+    btn_summary.addEventListener("click", function() {
 	summary.__el.hidden = !summary.__el.hidden;
+	btn_srefresh.disabled = summary.__el.hidden;
     });
-    btn.innerHTML = "S";
-    h1.appendChild(btn);
+    btn_summary.innerHTML = "S";
+    h1.appendChild(btn_summary);
 }
 
 function fixup_element_single(el, fn)
