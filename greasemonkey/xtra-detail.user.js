@@ -333,10 +333,10 @@ function fixup_xtra_detail()
     summary.fill();
     grid.hidden = true;
 
-    table.onchange = function() {
+    table.addEventListener("change", function() {
 	summary.refresh();
 	return true;
-    }
+    });
 
     console.log("xtra-detail done");
 }
