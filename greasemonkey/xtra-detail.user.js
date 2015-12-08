@@ -1,9 +1,10 @@
 // ==UserScript==
 // @name        xtra-detail
 // @namespace   tk
-// @include     https://tk-sc.intern.sigma-chemnitz.de/Employees/Details/*
-// @include     https://tk-ssc.intern.sigma-chemnitz.de/Employees/Details/*
 // @version     1.0.1
+// @include     https://tk-*c.intern.sigma-chemnitz.de/Employees/Details/*
+// @include     https://tk-*.intern.sigma-chemnitz.de/Tasks/Details/*
+// @include     https://tk-*.intern.sigma-chemnitz.de/Phases/Details/*
 // @grant       none
 // ==/UserScript==
 var FIXUP_MARKER = "ensc-fixup";

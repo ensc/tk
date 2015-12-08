@@ -1,9 +1,9 @@
 // ==UserScript==
 // @name        add-remove
 // @namespace   tk
-// @include     https://tk-sc.intern.sigma-chemnitz.de/Employees/Details/*
-// @include     https://tk-ssc.intern.sigma-chemnitz.de/Employees/Details/*
-// @version     1.1.2
+// @include     https://tk-*c.intern.sigma-chemnitz.de/Employees/Details/*
+// @include     https://tk-*.intern.sigma-chemnitz.de/Tasks/Details/*
+// @version     1.1.3
 // @grant       none
 // ==/UserScript==
 var FIXUP_MARKER = "ensc-fixup";
