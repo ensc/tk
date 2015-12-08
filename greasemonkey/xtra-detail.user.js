@@ -314,7 +314,7 @@ function fixup_xtra_detail()
     h1 = h1[0];
 
     var grid = document.getElementsByClassName("grid");
-    if (!grid || grid.length != 2)
+    if (!grid)
 	return;
     grid = grid[0];
 
