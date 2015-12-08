@@ -54,7 +54,15 @@
 (defcustom ensc/tk-ignore-buffers
   '(" *Minibuf-1*"
     "*Completions*"
-    "*Messages*")
+    "*Messages*"
+    "*Group*"
+    "*vc-diff*"
+    "*grep*"
+    "*compilation*"
+    "*Commit Message*"
+    "*Summary INBOX*"
+    "*Article INBOX*"
+    "*git-status*")
   "buffers to be ignored from being logged")
 
 (defun ensc/_tk-pack-buffer (buffer)
