@@ -13,6 +13,50 @@ var DATE_FMT_OPTS = { year: "numeric", month: "2-digit", day: "2-digit" ,
 		      weekday: "short" };
 var DATE_FMT = new Intl.DateTimeFormat('de-DE', DATE_FMT_OPTS);
 
+function emit_event(inp, ev)
+{
+    var e = document.createEvent("HTMLEvents");
+    e.initEvent(ev, false, true);
+    inp.dispatchEvent(e);
+}
+
+function select_time_input(inp, tm)
+{
+    var col = inp.getAttribute("data-column");
+    if (col != "0")
+	return;
+
+    var txt = "" + (tm.getMonth() + 1) + "." + tm.getFullYear();
+
+    inp.value = txt;
+    emit_event(inp, "keyup");
+}
+
+function select_time(tm)
+{
+    var table = document.getElementById('timeslist');
+    if (!table)
+	return;
+
+    var thead = table.getElementsByTagName("thead");
+    if (!thead || thead.length != 1)
+	return;
+    thead = thead[0];
+
+    var tr = thead.getElementsByClassName("tablesorter-filter-row");
+    if (!tr || tr.length != 1)
+	return;
+
+    tr = tr[0];
+
+    var inputs = tr.getElementsByTagName("input");
+    if (!inputs)
+	return;
+
+    for (var i = 0; i < inputs.length; ++i)
+	select_time_input(inputs[i], tm);
+}
+
 function fixup_h1(h1, info, summary)
 {
     var btn_hide = document.createElement("button");
@@ -40,6 +84,23 @@ function fixup_h1(h1, info, summary)
     });
     btn_srefresh.innerHTML = "R";
     h1.appendChild(btn_srefresh);
+
+
+    var btn_month_prev = document.createElement("button");
+    btn_month_prev.addEventListener("click", function() {
+	var now = new Date();
+	select_time(new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0));
+    });
+    btn_month_prev.innerHTML = "-1"
+    h1.appendChild(btn_month_prev);
+
+    var btn_month_cur = document.createElement("button");
+    btn_month_cur.addEventListener("click", function() {
+	var now = new Date();
+	select_time(new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0));
+    });
+    btn_month_cur.innerHTML = "+0"
+    h1.appendChild(btn_month_cur);
 }
 
 function fixup_element_single(el, fn)
