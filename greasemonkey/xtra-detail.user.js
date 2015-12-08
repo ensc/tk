@@ -300,7 +300,7 @@ var Summary = function(table) {
 
 	tbody.appendChild(hline(2));
 	tbody.appendChild(total_line(total));
-	
+
 	this.__content.innerHTML = "";
 	this.__content.appendChild(table);
     }
