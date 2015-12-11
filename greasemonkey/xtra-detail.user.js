@@ -4,7 +4,7 @@
 // @include     https://tk-*c.intern.sigma-chemnitz.de/Employees/Details/*
 // @include     https://tk-*.intern.sigma-chemnitz.de/Tasks/Details/*
 // @include     https://tk-*.intern.sigma-chemnitz.de/Phases/Details/*
-// @version     1.1
+// @version     1.2
 // @grant       none
 // ==/UserScript==
 var FIXUP_MARKER = "ensc-fixup";
@@ -196,7 +196,7 @@ function _create_line(td0_content, cnt)
     td0.textContent = td0_content;
     td0.align = "right";
 
-    td1.textContent = ((cnt/60).toFixed(0) + ":" + ('0' + cnt%60).slice(-2));
+    td1.textContent = (Math.floor(cnt/60).toFixed(0) + ":" + ('0' + cnt%60).slice(-2));
     td1.align = "right";
     td1.style['padding-left'] = "2em";
 
