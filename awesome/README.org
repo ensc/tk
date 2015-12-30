@@ -1,0 +1,27 @@
+* What is "tk.lua"
+
+"tk.lua" is an awesome plugin to send information about window related
+events to tk-daemon.
+
+* Usage
+
+Put something like
+
+#+BEGIN_SRC lua
+tk_mod  = require("/home/ensc/src/tk/awesome/tk")
+local tk = tk_mod.init()
+
+tk.rules = {
+    { class = "Firefox", name = ".*%(Privater Modus%).*" },
+    { class = "Keepassx" },
+    { class = "Kioexec" },
+    { class = "Emacs", name = "^ %*Minibuf%-1%* - .*", is_new = false },
+}
+
+tk.connect_signals(tk, client)
+#+END_SRC
+
+into =$HOME/.config/rc.lua=.
+
+Adapt path names as needed and add selectors matching windows which
+you want to be ignored from recording.

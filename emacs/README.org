@@ -1,0 +1,16 @@
+* What is "tk.el"?
+
+"tk.el" is an emacs script which sends information about idle status
+and active buffers to the tk daemon.
+
+* Usage
+
+Add something like
+
+#+BEGIN_SRC elisp
+(when (file-exists-p (concat (getenv "XDG_RUNTIME_DIR") "/tk.sock"))
+  (load-file (concat (getenv "HOME") "/src/tk/emacs/tk.el"))
+  (ensc/tk-start))
+#+END_SRC
+
+to your =.emacs=. Adapt socket path and location of =tk.el= as needed.

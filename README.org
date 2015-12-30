@@ -1,0 +1,20 @@
+* Subdirectories
+
+** public interest
+
+- =awesome/= :: client for awesome window manager
+
+- =lua/= :: provides lua bindings for =XScreenSaverQueryInfo()=;
+  required by the awesome client
+
+- =emacs/= :: client for emacs editor
+
+- =daemon/= :: the time keeping daemon
+
+
+** local interest
+
+- =cli/= :: command line interface for entering timekeeping data
+
+- =greasemonkey/= :: greasemonkey scripts to enhance the timekeeping
+  web interface

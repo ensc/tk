@@ -1,0 +1,41 @@
+* What is "tk-daemon"
+
+"tk-daemon" listens for messages from supported clients and writes the
+content of these messages into a database.
+
+** supported events
+
+ - connect :: sent be all clients when connecting to "tk-daemon"
+
+ - focus/unfocus :: sent by window manager when window gets focus or
+   when focus is removed.
+
+ - manage/unmanage :: sent by window manager when window is created or
+   closed
+
+ - name :: sent by window manager when window changes its name; this
+   happens e.g. when shell is configured to write the current working
+   directory into the xterm title
+
+ - idle/resume :: sent by clients which support the concept of an
+   "idle" state.  For window manager this is e.g. triggered when the
+   values returned by =XScreenSaverQueryInfo()= exceed a configurable
+   threshold, or for emacs when its idle timer reaches a limit
+
+ - buffer enter/leave :: sent by editors when a buffer (emacs terminolgy;
+   corresponds usually (but not always) to a file) is entered
+
+
+* Usage
+
+When using =systemd= copy the file
+
+- =tk-daemon.service=
+- =tk-daemon.socket=
+
+into the user's systemd directory (e.g. =$HOME/.config/systemd/user=)
+and enable it:
+
+#+BEGIN_SRC sh
+systemctl --user enable tk-daemon.socket
+#+END_SRC
