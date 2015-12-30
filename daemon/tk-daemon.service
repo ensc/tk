@@ -1,0 +1,5 @@
+[Unit]
+Description=Timekeeping service
+
+[Service]
+ExecStart = /usr/local/bin/tk-daemon - ${XDG_DATA_HOME}/tk

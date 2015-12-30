@@ -1,0 +1,8 @@
+[Unit]
+Description=Timekeeping socket
+
+[Socket]
+ListenStream = %t/tk.sock
+
+[Install]
+WantedBy = sockets.target
