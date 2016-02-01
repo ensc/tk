@@ -213,8 +213,14 @@
       (when (and (bufferp ensc/_tk-buffer-current)
 		 (not (eq ensc/_tk-buffer-current buffer)))
 	(ensc/tk-submit-event ?b ensc/_tk-buffer-current))
-      (setq ensc/_tk-buffer-current buffer)
-      (ensc/tk-submit-event ?B ensc/_tk-buffer-current))))
+      (when (or (not (bufferp ensc/_tk-buffer-current))
+		(not (eq ensc/_tk-buffer-current buffer))
+		;; prevent records caused by events triggered by
+		;; autosave or backup features
+		(and (buffer-modified-p buffer)
+		     (< (time-to-seconds (current-idle-time)) 30)))
+	(ensc/tk-submit-event ?B buffer))
+      (setq ensc/_tk-buffer-current buffer))))
 
 (defun ensc/tk-buffer-updated ()
   (when ensc/_tk-buffer-updated-timer
