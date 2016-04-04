@@ -207,8 +207,7 @@ print(data.get_project(), data.url_data())
 
 #raise Exception("X")
 
-cookiefile = tempfile.NamedTemporaryFile()
-
+cookiefile = tempfile.NamedTemporaryFile(prefix="tk")
 auth = netrc.netrc().authenticators(url[8:-1])
 hdr  = HttpHeader()
 
