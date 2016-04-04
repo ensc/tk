@@ -216,7 +216,6 @@ c = pycurl.Curl()
 c.setopt(c.URL, url + "Login")
 c.setopt(c.VERBOSE, 0)
 c.setopt(c.COOKIEFILE, cookiefile.name)
-c.setopt(c.COOKIEJAR, cookiefile.name)
 c.setopt(c.WRITEFUNCTION, lambda x: None)
 c.setopt(c.HEADERFUNCTION, hdr.write)
 
