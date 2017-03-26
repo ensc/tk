@@ -28,16 +28,25 @@ NOW = time.localtime()
 
 class TimeSpan:
     def __init__(self, v):
-        (self.__start, self.__end) = TimeSpan.parse(v)
+        p = v.find('X')
+        if p >= 0:
+            inc = TimeSpan.parse(v[:p])
+            out = TimeSpan.parse(v[p+1:])
+        else:
+            inc = TimeSpan.parse(v)
+            out = [0, 0]
+
+        self.__start = [inc[0], out[0]]
+        self.__end   = [inc[1], out[1]]
 
     def str_start(self):
-        return TimeSpan._fmt_colon(self.__start)
+        return TimeSpan._fmt_colon(self.__start[0])
 
     def str_end(self):
-        return TimeSpan._fmt_colon(self.__end)
+        return TimeSpan._fmt_colon(self.__end[0])
 
-    def str_duration(self):
-        return TimeSpan._fmt_comma(self.__end - self.__start)
+    def str_duration(self, idx):
+        return TimeSpan._fmt_comma(self.__end[idx] - self.__start[idx])
 
     @staticmethod
     def _fmt_colon(n):
@@ -81,8 +90,6 @@ class TimeSpan:
 
             end   = start + TimeSpan._parse(span[p+1:])
             p     = -1
-        else:
-            p     = 0
 
         if p == 0:
             start = 0
@@ -139,11 +146,11 @@ class DataSet:
             "Date" : self.__date.str(),
             "From" : self.__span.str_start(),
             "To"   : self.__span.str_end(),
-            "Effort" : self.__span.str_duration(),
+            "Effort" : self.__span.str_duration(0),
             "Break" : 0,
             "InternalComments" : self.__notes,
             "ExternalComments" : self.__desc,
-            "NotInvoicable" : 0,
+            "NotInvoiceable" : self.__span.str_duration(1),
         }
 
     def get_project(self):
