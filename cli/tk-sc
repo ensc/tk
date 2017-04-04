@@ -21,10 +21,46 @@ import time
 import urllib.parse
 import sys
 import os
+import functools
 
-exec(open(os.getenv("HOME") + "/.config/tk.conf").read())
+class P:
+    def __init__(self, uuid, short, id, tm_start = None, tm_end = None, desc = None):
+        self.uuid = uuid
+        self.id   = id
+        
+        if tm_start:
+            self.tm_start = Date(tm_start)
+        else:
+            self.tm_start = None
 
-NOW = time.localtime()
+        if tm_end:
+            self.tm_end   = Date(tm_end)
+        else:
+            self.tm_end   = None
+            
+        self.desc     = desc
+        self.short    = short
+
+    def is_active(self, now):
+        return (((self.tm_start is None) or (now >= self.tm_start)) and
+                ((self.tm_end   is None) or (now <= self.tm_end)))
+
+    def __repr__(self):
+        return "%s(%s) %s | %s..%s" % (self.uuid, self.id, self.short, self.tm_start, self.tm_end)
+
+    def __str__(self):
+        return "%s(%s)\t%s" % (self.uuid, self.id, self.short)
+
+    def __eq__(self, a):
+        if isinstance(a, P):
+            return ((a.uuid == self.uuid) or
+                    (a.id != None and a.id == self.id) or
+                    (a.short != None and a.short == self.short))
+        elif isinstance(a, str):
+            return self.uuid == a or self.id == a or self.short == a
+        else:
+            raise Exception("bad type a")
+        
 
 class TimeSpan:
     def __init__(self, v):
@@ -97,12 +133,22 @@ class TimeSpan:
 
         return (start, end)
 
+@functools.total_ordering
 class Date:
     def __init__(self, v):
         self.__date = Date.parse(v)
 
+    def __eq__(self, tm):
+        return self.__date == tm
+
+    def __lt__(self, tm):
+        return self.__date < tm
+    
     def str(self):
         return time.strftime("%d.%m.%Y", time.localtime(self.__date))
+
+    def __str__(self):
+        return self.str()
 
     @staticmethod
     def _parse(d):
@@ -130,12 +176,15 @@ class Date:
 
 class DataSet:
     def __init__(self, project, date, span, desc, notes = None):
-        if project not in PROJECTS:
-            print("No such project; available ones:" +
-                  '\n  '.join(sorted(PROJECTS.keys())) + '\n')
+        try:
+            idx = _projects.index(project)
+        except ValueError:
+            print("No such project; available ones:\n" +
+                  '\n'.join(map(lambda x: "  %s" %x ,
+                                sorted(_projects, key=lambda x: x.short))) + '\n')
             raise Exception("")
 
-        self.__project = PROJECTS[project]
+        self.__project = _projects[idx].uuid
         self.__date    = Date(date)
         self.__span    = TimeSpan(span)
         self.__desc    = desc
@@ -203,16 +252,20 @@ class HttpHeader:
 
         return res
 
+######
+    
+exec(open(os.getenv("HOME") + "/.config/tk.conf").read())
 
+NOW_TM = time.time()
+NOW = time.localtime(NOW_TM)
 
+_projects = list(filter(lambda x: x.is_active(NOW_TM), PROJECTS))
 
 args = sys.argv + [None,]
 
 data = DataSet(args[1], args[2], args[3], args[4], args[5])
 
 print(data.get_project(), data.url_data())
-
-#raise Exception("X")
 
 cookiefile = tempfile.NamedTemporaryFile(prefix="tk")
 auth = netrc.netrc().authenticators(url[8:-1])
