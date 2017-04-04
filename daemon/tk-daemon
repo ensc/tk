@@ -202,6 +202,12 @@ class EventConnect(Event):
                     NetString('id'),
                     NetString('detail') ])
 
+class EventDisconnect(Event):
+    table = Table('connect',
+                  [ NetFixed('pid',    'INTEGER', None),
+                    NetFixed('id',     'TEXT',    None),
+                    NetFixed('detail', 'TEXT',    None) ])
+
 class EventDropped(Event):
     table = Table('dropped',
                   [ NetUInt32('count') ])
@@ -238,6 +244,7 @@ class NetHandler(socketserver.BaseRequestHandler):
         b'm':	EventUnManage,
         b'N':	EventName,
         b'C':	EventConnect,
+        b'c':	EventDisconnect,
         b'D':	EventDropped,
         b'I':	EventIdle,
         b'i':	EventResume,
@@ -257,6 +264,8 @@ class NetHandler(socketserver.BaseRequestHandler):
         while True:
             (data, tmp, tmp, tmp) = self.request.recvmsg(4, 0, socket.MSG_WAITALL)
             if len(data) == 0:
+                ev = EventDisconnect(tm, [])
+                self.__server.log_event(self, ev)
                 break
 
             (l,)    = struct.unpack(">L", data)
