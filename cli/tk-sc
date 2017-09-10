@@ -147,6 +147,9 @@ class Date:
     def str(self):
         return time.strftime("%d.%m.%Y", time.localtime(self.__date))
 
+    def str_dash(self):
+        return time.strftime("%Y-%m-%d", time.localtime(self.__date))
+
     def __str__(self):
         return self.str()
 
@@ -207,6 +210,9 @@ class DataSet:
 
     def url(self, base):
         return base + self.__project
+
+    def url_stats(self, base):
+        return base + "date=" + self.__date.str_dash()
 
 class HttpHeader:
     def __init__(self):
@@ -304,3 +310,18 @@ if hdr.is_redirection():
     print("Submitted", hdr.get_redirection(url).decode('ascii'))
 
 assert(c.getinfo(c.HTTP_CODE) in [200, 302])
+
+xx_data = []
+c.setopt(c.URL, data.url_stats(url + "/Times/Stats?"))
+c.setopt(c.POST, 0)
+c.setopt(c.VERBOSE, 0)
+c.setopt(c.WRITEFUNCTION, lambda x: xx_data.append(x))
+c.setopt(c.POSTFIELDS, urllib.parse.urlencode(data.url_data()))
+
+hdr.reset()
+c.perform()
+assert(c.getinfo(c.HTTP_CODE) in [200, 302])
+
+import json
+print(json.decoder.JSONDecoder()
+      .raw_decode(bytes.decode(b''.join(xx_data))))
