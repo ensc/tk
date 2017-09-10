@@ -82,7 +82,7 @@
   (bindat-pack ensc/_tk-event-connect
 	       `((:pid    . ,(emacs-pid))
 		 (:id     . ,(ensc/_tk-pack-string "emacs"))
-		 (:detail . ,(ensc/_tk-pack-string "")))))
+		 (:detail . ,(ensc/_tk-pack-string (combine-and-quote-strings command-line-args))))))
 
 (defun ensc/_tk-pack-event (code &rest args)
   "Pack an event"
