@@ -1,0 +1,138 @@
+#! /bin/bash
+
+_tmp=$(getopt -l "buffer,window,focus,last-month,cur-month,today,now:,help,version" \
+		  -o "bwfLCTn:" -- "$@") || {
+    echo "Invalid option" >&2
+    exit 1
+}
+
+t=`mktemp -t tk-query.XXXXXX`
+trap "rm -f $t" EXIT
+
+eval set -- $_tmp
+
+mode=
+date_start=
+date_end=
+
+_m=`date +%m`
+_y=`date +%Y`
+_d=`date +%d`
+
+while true; do
+    case $1 in
+      --buffer|-b)
+	    mode=buffer
+	    ;;
+
+      --window|-w)
+	    mode=window
+	    ;;
+
+      --focus|-f)
+	    mode=focus
+	    ;;
+
+      --last-month|-L)
+	    _m0=`date +%m -d "${_y}${_m}01 - 1 month"`
+	    _y0=`date +%y -d "${_y}${_m}01 - 1 month"`
+
+	    date_start=`date +%s -d "${_y0}${_m0}01"`
+	    date_end=`date +%s -d "${_y}${_m}01"`
+	    ;;
+
+      --cur-month|-C)
+	    _m0=`date +%m -d "${_y}${_m}01 + 1 month"`
+	    _y0=`date +%y -d "${_y}${_m}01 + 1 month"`
+
+	    date_start=`date +%s -d "${_y}${_m}01"`
+	    date_end=`date +%s -d "${_y0}${_m0}01"`
+	    ;;
+
+      --today|-T)
+	    date_start=`date +%s -d "${_y}${_m}${_d}"`
+	    date_end=`date +%s -d "${_y}${_m}${_d} + 1 day"`
+	    ;;
+
+      --now|-n)
+	    _m=`date +%m -d "$2"` || {
+		echo "failed to parse date '$2'" >&2
+		exit 1
+	    }
+	    _y=`date +%Y -d "$2"`
+	    _d=`date +%d -d "$2"`
+
+	    shift
+	    ;;
+
+      --)
+	    shift
+	    break
+	    ;;
+    esac
+
+    shift
+done
+
+test -n "$mode" || {
+    echo "No mode specified" >&2
+    exit 1
+}
+
+test $# -ne 0 || {
+    echo "No database specified" >&2
+    exit 1
+}
+
+
+cond=()
+
+test -z "$date_start" || cond+=( "tm >= ${date_start}" )
+test -z "$date_end" || cond+=( "tm < ${date_end}" )
+
+_run_query() {
+    local query=$1
+    local post=$2
+
+    shift 2
+
+    delim="where"
+
+    for c in "${cond[@]}"; do
+	query="$query $delim $c"
+	delim="and"
+    done
+
+    for f in "$@"; do
+	sqlite3 -separator '	' "$f" "$query $post"
+    done
+}
+
+run_buffer() {
+    local query="select datetime(tm, 'unixepoch', 'localtime'),modified,file,size \
+ from buffer"
+
+    cond+=( "TRIM(file) IS NOT ''" )
+    cond+=( "enter" )
+
+    _run_query "$query" "order by tm" "$@"
+}
+
+run_focus() {
+    local query="select datetime(tm, 'unixepoch', 'localtime'),name from focus"
+
+    cond+=( "focus" )
+
+    _run_query "$query" "order by tm" "$@"
+}
+
+run_window() {
+    local query="select datetime(tm, 'unixepoch', 'localtime'),pid,name from window_name"
+
+    cond+=( "focus" )
+
+    _run_query "$query" "order by tm" "$@"
+}
+
+run_"$mode" "$@" >$t
+{ rm -f $t; exec cat; } < $t
