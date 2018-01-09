@@ -33,6 +33,16 @@ while true; do
 	    mode=focus
 	    ;;
 
+      --month|-M)
+	    _m0=`date +%m -d "${_y}${_m}01 - $2 month"`
+	    _y0=`date +%y -d "${_y}${_m}01 - $2 month"`
+
+	    date_start=`date +%s -d "${_y0}${_m0}01"`
+	    date_end=`date +%s -d "${_y}${_m}01"`
+
+	    shift
+	    ;;
+
       --last-month|-L)
 	    _m0=`date +%m -d "${_y}${_m}01 - 1 month"`
 	    _y0=`date +%y -d "${_y}${_m}01 - 1 month"`
