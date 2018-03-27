@@ -4,7 +4,8 @@
 // @include     https://tk-*c.intern.sigma-chemnitz.de/Employees/Details/*
 // @include     https://tk-*.intern.sigma-chemnitz.de/Tasks/Details/*
 // @version     1.1.3
-// @grant       none
+// @grant       GM.xmlHttpRequest
+// @grant       XMLHttpRequest
 // ==/UserScript==
 var FIXUP_MARKER = "ensc-fixup";
 var REMOVE_METHOD = 1;
@@ -47,46 +48,47 @@ function _remove_data_form(doc, uri)
 	    data.append(e.name, e.value);
     }
 
-    xhr = new XMLHttpRequest();
-    xhr.open("POST", uri);
-    xhr.setRequestHeader('Referer', doc.uri);
+    console.log("sending remove-data");
 
-    xhr.addEventListener("error", function(ev) {
-	alert("Error: " + ev);
-    });
-
-    xhr.onreadystatechange = function () {
-        if (xhr.readyState == 4) {
-	    if (xhr.status != 200) {
-		alert("Failed to submit data: " + xhr.statusText);
-		return;
+    GM.xmlHttpRequest({
+	method: "POST",
+	url: uri,
+	onerror: function(ev) {
+	    alert("Error: " + ev);
+	},
+	onload: function(resp) {
+            if (resp.readyState == 4) {
+		if (resp.status != 200) {
+		    alert("Failed to submit data: " + resp.statusText);
+		    return;
+		}
 	    }
-
-	    // alert("form submitted");
 	}
-    };
-
-    xhr.send(data);
+    });
 }
 
 function _remove_data_complex(key)
 {
     var uri = "/Times/Edit/" + encodeURIComponent(key);
-    var xhr = new XMLHttpRequest();
-
-    xhr.open("GET", uri, true);
-    xhr.onreadystatechange = function () {
-        if (xhr.readyState == 4) {
-	    if (xhr.status != 200) {
-		alert("Failed to get form: " + xhr.statusText);
-		return;
+    GM.xmlHttpRequest({
+	method: "GET",
+	url: uri,
+	onload: function(resp) {
+            if (resp.readyState == 4) {
+		if (resp.status != 200) {
+		    alert("Failed to get form: " + resp.statusText);
+		    return;
+		}
 	    }
 
-	    _remove_data_form(xhr.responseXML, uri);
+	    if (!resp.responseXML) {
+		resp.responseXML = new DOMParser()
+		    .parseFromString(resp.responseText, "text/html");
+	    }
+
+	    _remove_data_form(resp.responseXML, uri);
         }
-    };
-    xhr.responseType = "document";
-    xhr.send();
+    });
     return;
 }
 
