@@ -53,6 +53,7 @@ function _remove_data_form(doc, uri)
     GM.xmlHttpRequest({
 	method: "POST",
 	url: uri,
+	data: data,
 	onerror: function(ev) {
 	    alert("Error: " + ev);
 	},
