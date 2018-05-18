@@ -1,7 +1,7 @@
 #! /bin/bash
 
-_tmp=$(getopt -l "buffer,window,focus,last-month,cur-month,today,now:,help,version" \
-		  -o "bwfLCTn:" -- "$@") || {
+_tmp=$(getopt -l "buffer,window,focus,last-month,cur-month,today,now:,month:help,version" \
+		  -o "bwfLCTn:M:" -- "$@") || {
     echo "Invalid option" >&2
     exit 1
 }
