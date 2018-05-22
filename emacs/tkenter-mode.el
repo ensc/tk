@@ -1,17 +1,28 @@
 (require 'org-table)
 
 (defvar-local ensc/tkenter-idle-timer nil "TK enter timer")
+(defvar-local ensc/tkenter-skip-timer nil "skip idle timer the next time")
 (defvar ensc/tkenter-keymap
   (let ((map (make-sparse-keymap)))
     (define-key map [tab] 'ensc/tkenter-normalize-cell)
     (define-key map (kbd "C-c t") 'ensc/tkenter-transmit)
     map))
 
+(defcustom ensc/tkenter-cli-program
+  "tk-sc"
+  "The tk-cli program")
+
+(defcustom ensc/tkenter-base-url
+  "https://tk-sc.intern.sigma-chemnitz.de"
+  "The TK uri")
+
 (defcustom ensc/tkenter-columns
   '((:date . 1)
     (:project . 2)
     (:effort . 3)
-    (:desc . 4))
+    (:desc . 4)
+    (:note . 5)
+    (:url . 6))
   "column; date, project, effort, description")
 
 (defun ensc/tkenter-column-get (key)
@@ -84,7 +95,7 @@
 	(ensc/tkenter-convert-effort elems-exc))))
 
 (defun ensc/tkenter-summary (key col)
-  (let ((row 1)
+  (let ((row 2)
 	(cur nil)
 	(effort nil)
 	(total-effort 0)
@@ -123,12 +134,12 @@
 (defun ensc/tkenter-summary-project (project)
   (ensc/tkenter-summary project :project))
 
-(defun ensc/tkenter-format-effort-single (effort)
+(defun ensc/tkenter-format-effort-single (effort &optional split-days)
   (let ((res "")
 	(fmt "%d:"))
 
-    (when (>= effort (* 24 3600))
-      (setq res (format "%s%d" res (/ effort (* 24 3600)))
+    (when (and split-days (>= effort (* 24 3600)))
+      (setq res (format "%s%d:" res (/ effort (* 24 3600)))
 	    fmt "%02d:"
 	    effort (% effort (* 24 3600))))
 
@@ -169,12 +180,12 @@
 
 (defun ensc/tkenter-format-date (date)
   (let ((res (format-time-string "%a %d.%m.%Y:" date)))
-    (put-text-property 0 (length res) 'face '(font-lock-face '(:inherit bold)) res)
+    (put-text-property 0 (length res) 'face '(:inherit bold) res)
     res))
 
 (defun ensc/tkenter-format-project (project)
   (let ((res project))
-    (put-text-property 0 (length res) 'face '(font-lock-face '(:inherit bold)) res)
+    (put-text-property 0 (length res) 'face '(:inherit bold) res)
     res))
 
 
@@ -182,9 +193,9 @@
   (let* ((tot-str (ensc/tkenter-format-effort-single (nth 0 effort)))
 	 (exc     (nth 1 effort))
 	 (exc-str (when (> exc 0) (concat "-" (ensc/tkenter-format-effort-single exc)))))
-    (put-text-property 0 (length tot-str) 'face '(font-lock-face '(:foreground "blue")) tot-str)
+    (put-text-property 0 (length tot-str) 'face '(:foreground "blue") tot-str)
     (when exc-str
-      (put-text-property 0 (length exc-str) 'face '(font-lock-face '(:foreground "red")) exc-str)
+      (put-text-property 0 (length exc-str) 'face '(:foreground "red") exc-str)
       (setq tot-str (concat tot-str exc-str)))
     tot-str))
 
@@ -206,15 +217,18 @@
 		 (nth 2 sum-project))))))
 
 (defun ensc/tkenter-idle-fn (buf)
-  (when (and ensc/tkenter-mode
-	     (eq (current-buffer) buf)
-	     (string-equal major-mode "org-mode")
-	     (org-at-table-p)
-	     (not (org-at-table-hline-p)))
-    (let ((col (org-table-current-column))
-	  (row (org-table-current-line)))
-      (when (and (/= col 0)(/= row 0))
-	(ensc/tkenter-run col row)))))
+  (ignore-errors
+      (when (and ensc/tkenter-mode
+		 (eq (current-buffer) buf)
+		 (string-equal major-mode "org-mode")
+		 (org-at-table-p)
+		 (not (org-at-table-hline-p)))
+	(let ((col (org-table-current-column))
+	      (row (org-table-current-line)))
+	  (if ensc/tkenter-skip-timer
+	      (setq ensc/tkenter-skip-timer nil)
+	    (when (and (/= col 0)(/= row 0))
+	      (ensc/tkenter-run col row)))))))
 
 (defun ensc/tkenter-normalize-date (text-old)
   (format-time-string " %d.%m. " (ensc/tkenter-parse-date text-old)))
@@ -224,8 +238,8 @@
 
 (defun ensc/tkenter-normalize-effort (text-old)
   (let* ((effort    (ensc/tkenter-parse-effort text-old))
-	 (text-pos  (ensc/tkenter-format-effort-single (nth 0 effort)))
-	 (text-neg  (ensc/tkenter-format-effort-single (nth 1 effort))))
+	 (text-pos  (ensc/tkenter-format-effort-single (nth 0 effort) t))
+	 (text-neg  (ensc/tkenter-format-effort-single (nth 1 effort) t)))
     (if (> (nth 1 effort) 0)
 	(concat "+" text-pos "X" text-neg)
       (concat "+" text-pos))))
@@ -246,14 +260,15 @@
 
 (defun ensc/tkenter-normalize-cell ()
   (interactive)
-  (when (and ensc/tkenter-mode
-	     (string-equal major-mode "org-mode")
-	     (org-at-table-p)
-	     (not (org-at-table-hline-p)))
-    (let ((col (org-table-current-column))
-	  (row (org-table-current-line)))
-      (when (and (/= col 0)(/= row 0))
-	(ensc/_tkenter-normalize-cell col row))))
+  (ignore-errors
+    (when (and ensc/tkenter-mode
+	       (string-equal major-mode "org-mode")
+	       (org-at-table-p)
+	       (not (org-at-table-hline-p)))
+      (let ((col (org-table-current-column))
+	    (row (org-table-current-line)))
+	(when (and (/= col 0)(/= row 0))
+	  (ensc/_tkenter-normalize-cell col row)))))
   (org-cycle))
     
 
@@ -274,6 +289,73 @@
 
 (defun ensc/tkenter-unittest-parse-effort (effort exp)
   (assert (equal (ensc/tkenter-parse-effort effort) exp)))
+
+(defun ensc/tkenter-translate-project (project)
+  (let ((uuid (lax-plist-get
+	       (org-table-get-remote-range "project-mapping" "@2$1..@>$2")
+	       project)))
+    (unless uuid
+      (error "No such project %s" project)
+      
+      )
+    
+    (substring-no-properties uuid)))
+
+(defun ensc/_tkenter-transmit (col row)
+  (let* ((date    (ensc/tkenter-parse-date (ensc/tkenter-get-non-null row :date)))
+	 (project (ensc/tkenter-translate-project (ensc/tkenter-get-non-null row :project)))
+	 (effort  (ensc/tkenter-parse-effort (ensc/tkenter-get-non-null row :effort)))
+	 (desc    (org-table-get row (ensc/tkenter-column-get :desc)))
+	 (note    (org-table-get row (ensc/tkenter-column-get :note)))
+	 (url     (org-table-get row (ensc/tkenter-column-get :url)))
+	 (result  nil))
+
+    (when (not (string= url ""))
+      (error "Already submitted!"))
+
+    (setq result (with-temp-buffer
+		   (let ((code (call-process ensc/tkenter-cli-program
+					     nil t t
+					     "--batch"
+					     (concat "@" project)
+					     (format-time-string "%d.%m.%Y" date)
+					     (concat "+"
+						     (ensc/tkenter-format-effort-single (nth 0 effort) t)
+						     "X+"
+						     (ensc/tkenter-format-effort-single (nth 1 effort) t))
+					     (or desc "")
+					     (or note ""))))
+		     (append (list code) (split-string (buffer-string))))))
+    (cond
+     ((= 0 (nth 0 result))
+      (when (not (string= "OK" (nth 1 result)))
+	(error "Unexpected response: %s" result))
+
+      (org-table-put row (ensc/tkenter-column-get :url)
+		     (concat "[[" ensc/tkenter-base-url "/Times/Edit/" (nth 2 result) "][OK]]"))
+
+      (message "Transmitted as %s" (nth 2 result))
+      (org-table-align))
+     (t
+      (error "Failed to submit data: %s" result)))))
+ 
+
+(defun ensc/tkenter-transmit ()
+  (interactive)
+  (setq ensc/tkenter-skip-timer t)
+  (when (and ensc/tkenter-mode
+	     (string-equal major-mode "org-mode")
+	     (org-at-table-p)
+	     (not (org-at-table-hline-p)))
+    (unwind-protect
+	(let ((col (org-table-current-column))
+	      (row (org-table-current-line)))
+	  (when (and (/= col 0)(/= row 0))
+	    (ensc/_tkenter-transmit col row)))
+      (next-line)
+      (while (and (org-at-table-p)
+		  (org-at-table-hline-p))
+	(next-line)))))
 
 (defun ensc/tkenter-unittest ()
   (ensc/tkenter-unittest-parse-effort "1"        '(  3600     0))
