@@ -10,11 +10,15 @@
 
 (defcustom ensc/tkenter-cli-program
   "tk-sc"
-  "The tk-cli program")
+  "The tk-cli program"
+  :type 'file
+  :group 'ensc/tkenter)
 
 (defcustom ensc/tkenter-base-url
   "https://tk-sc.intern.sigma-chemnitz.de"
-  "The TK uri")
+  "The TK uri"
+  :type 'string
+  :group 'enter/tkenter)
 
 (defcustom ensc/tkenter-columns
   '((:date . 1)
@@ -23,21 +27,27 @@
     (:desc . 4)
     (:note . 5)
     (:url . 6))
-  "column; date, project, effort, description")
+  "column; date, project, effort, description"
+  :type 'sexp
+  :group 'ensc/tkenter)
+
+(defcustom ensc/tkenter-idle-delay
+  0.05
+  "The TK idle delay"
+  :type 'float
+  :group 'ensc/tkenter)
 
 (defun ensc/tkenter-column-get (key)
   (cdr (assoc key ensc/tkenter-columns)))
 
 (defun ensc/tkenter-get-non-null (row col)
-  (let ((text nil))
+  (let ((text nil)
+	(col-idx (ensc/tkenter-column-get col)))
     (while (and (not text)(> row 0))
-      (setq text (org-table-get row (ensc/tkenter-column-get col))
-	    row (- row 1))
-      (when (string-equal text "")
+      (setq text (substring-no-properties (org-table-get row col-idx))
+	    row (1- row))
+      (when (string= text "")
 	(setq text nil)))
-
-    (when text
-      (set-text-properties 0 (length text) nil text))
     text))
 
 (defun ensc/tkenter-convert-effort (effort)
@@ -52,7 +62,7 @@
 			     ((= pos 1) 3600)
 			     ((= pos 2) (* 3600 24))
 			     (t (error "Too much elements in effort")))))
-	      pos (+ pos 1))))))
+	      pos (1+ pos))))))
 
 (defun ensc/tkenter-parse-effort (effort)
   (let ((result 0)
@@ -114,11 +124,9 @@
 	(setq tmp-effort (ensc/tkenter-parse-effort effort)
 	      total-effort (+ total-effort (nth 0 tmp-effort))
 	      total-exc (+ total-exc (nth 1 tmp-effort))
-	      total-cnt (+ total-cnt 1))
-	;(message "    -> %s" tmp-effort)
-	)
+	      total-cnt (1+ total-cnt)))
 
-      (setq row (+ row 1)))
+      (setq row (1+ row)))
 
     (list total-effort total-exc total-cnt)))
 
@@ -179,12 +187,14 @@
 		 (nth 2 res))))
 
 (defun ensc/tkenter-format-date (date)
-  (let ((res (format-time-string "%a %d.%m.%Y:" date)))
+  (let ((res (format-time-string "%a %d.%m.%Y:" date))
+	(inhibit-modification-hooks t))
     (put-text-property 0 (length res) 'face '(:inherit bold) res)
     res))
 
 (defun ensc/tkenter-format-project (project)
-  (let ((res project))
+  (let ((res project)
+	(inhibit-modification-hooks t))
     (put-text-property 0 (length res) 'face '(:inherit bold) res)
     res))
 
@@ -192,7 +202,9 @@
 (defun ensc/tkenter-format-effort (effort)
   (let* ((tot-str (ensc/tkenter-format-effort-single (nth 0 effort)))
 	 (exc     (nth 1 effort))
-	 (exc-str (when (> exc 0) (concat "-" (ensc/tkenter-format-effort-single exc)))))
+	 (exc-str (when (> exc 0)
+		    (concat "-" (ensc/tkenter-format-effort-single exc))))
+	 (inhibit-modification-hooks t))
     (put-text-property 0 (length tot-str) 'face '(:foreground "blue") tot-str)
     (when exc-str
       (put-text-property 0 (length exc-str) 'face '(:foreground "red") exc-str)
@@ -201,8 +213,7 @@
 
 (defun ensc/tkenter-run (col row)
   (let ((date (ensc/tkenter-get-date row))
-	(project (ensc/tkenter-get-project row))
-	(inhibit-modification-hooks t))
+	(project (ensc/tkenter-get-project row)))
     (when (and date project)
       (let ((sum-day     (ensc/tkenter-summary-date    date))
 	    (date-parsed (ensc/tkenter-parse-date date))
@@ -216,19 +227,24 @@
 		 (ensc/tkenter-format-effort  sum-project)
 		 (nth 2 sum-project))))))
 
+(defmacro ensc/tkenter-within-cell (buf &rest body)
+  ""
+  (declare (indent 0) (debug t))
+  `(when (and ensc/tkenter-mode
+	      (or (not ,buf) (eq (current-buffer) ,buf))
+	      (string-equal major-mode "org-mode")
+	      (org-at-table-p)
+	      (not (org-at-table-hline-p)))
+    (let ((col (org-table-current-column))
+	  (row (org-table-current-line)))
+      (when (and (/= col 0)(/= row 0))
+	(progn ,@body)))))
+
 (defun ensc/tkenter-idle-fn (buf)
-  (ignore-errors
-      (when (and ensc/tkenter-mode
-		 (eq (current-buffer) buf)
-		 (string-equal major-mode "org-mode")
-		 (org-at-table-p)
-		 (not (org-at-table-hline-p)))
-	(let ((col (org-table-current-column))
-	      (row (org-table-current-line)))
-	  (if ensc/tkenter-skip-timer
-	      (setq ensc/tkenter-skip-timer nil)
-	    (when (and (/= col 0)(/= row 0))
-	      (ensc/tkenter-run col row)))))))
+  (ensc/tkenter-within-cell buf
+			    (if ensc/tkenter-skip-timer
+				(setq ensc/tkenter-skip-timer nil)
+			      (ensc/tkenter-run col row))))
 
 (defun ensc/tkenter-normalize-date (text-old)
   (format-time-string " %d.%m. " (ensc/tkenter-parse-date text-old)))
@@ -249,28 +265,22 @@
 	 (text-new (when (and text-old
 			      (not (string= "" text-old)))
 		     (cond
-		      ((= col (ensc/tkenter-column-get :date))    (ensc/tkenter-normalize-date text-old))
-		      ((= col (ensc/tkenter-column-get :project)) (ensc/tkenter-normalize-project text-old))
-		      ((= col (ensc/tkenter-column-get :effort))  (ensc/tkenter-normalize-effort text-old))))))
+		      ((= col (ensc/tkenter-column-get :date))
+		       (ensc/tkenter-normalize-date text-old))
+		      ((= col (ensc/tkenter-column-get :project))
+		       (ensc/tkenter-normalize-project text-old))
+		      ((= col (ensc/tkenter-column-get :effort))
+		       (ensc/tkenter-normalize-effort text-old))))))
     (when (and text-new
 	       (not (string= text-old text-new)))
-      ;(setq text-new (concat " " text-new " "))
-      ;(set-text-properties 0 (length text-new) 'face 'org-table text-new)
-      (org-table-put row col text-new t))))
+      (org-table-put row col text-new nil))))
 
 (defun ensc/tkenter-normalize-cell ()
   (interactive)
   (ignore-errors
-    (when (and ensc/tkenter-mode
-	       (string-equal major-mode "org-mode")
-	       (org-at-table-p)
-	       (not (org-at-table-hline-p)))
-      (let ((col (org-table-current-column))
-	    (row (org-table-current-line)))
-	(when (and (/= col 0)(/= row 0))
-	  (ensc/_tkenter-normalize-cell col row)))))
+    (ensc/tkenter-within-cell nil
+			      (ensc/_tkenter-normalize-cell col row)))
   (org-cycle))
-    
 
 ;;; autoload
 (define-minor-mode ensc/tkenter-mode
@@ -283,7 +293,8 @@
 		  (lambda () (when (timerp ensc/tkenter-idle-timer)
 			       (cancel-timer ensc/tkenter-idle-timer))))
 	(setq ensc/tkenter-idle-timer
-	     (run-with-idle-timer 0 t 'ensc/tkenter-idle-fn (current-buffer))))
+	      (run-with-idle-timer ensc/tkenter-idle-delay t
+				   'ensc/tkenter-idle-fn (current-buffer))))
     (cancel-timer ensc/tkenter-idle-timer))
   )
 
@@ -338,15 +349,12 @@
       (org-table-align))
      (t
       (error "Failed to submit data: %s" result)))))
- 
 
 (defun ensc/tkenter-transmit ()
   (interactive)
-  (setq ensc/tkenter-skip-timer t)
-  (when (and ensc/tkenter-mode
-	     (string-equal major-mode "org-mode")
-	     (org-at-table-p)
-	     (not (org-at-table-hline-p)))
+  (ensc/tkenter-within-cell
+    nil
+    (setq ensc/tkenter-skip-timer t)
     (unwind-protect
 	(let ((col (org-table-current-column))
 	      (row (org-table-current-line)))
