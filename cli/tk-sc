@@ -268,11 +268,28 @@ NOW = time.localtime(NOW_TM)
 _projects = list(filter(lambda x: x.is_active(NOW_TM), PROJECTS))
 
 def main():
-    args = sys.argv + [None,]
+    import argparse
 
-    data = DataSet(args[1], args[2], args[3], args[4], args[5])
+    parser = argparse.ArgumentParser(description='TK CLI')
 
-    print(data.get_project(), data.url_data())
+    parser.add_argument("--batch", action = 'store_const', const = 'debug',
+                        default = False)
+    parser.add_argument("--verbose", action = 'store_const', const = 'verbose',
+                        default = False)
+
+    parser.add_argument('project', metavar='<project>', type=str, help='project')
+    parser.add_argument('date',    metavar='<date>',    type=str, help='the date')
+    parser.add_argument('effort',  metavar='<effort>',  type=str, help='effort')
+    parser.add_argument('desc',    metavar='<description>', type=str, help='description')
+    parser.add_argument('note',    metavar='<note>',        type=str, help='description', nargs='?')
+
+    args = parser.parse_args()
+
+    data = DataSet(args.project, args.date, args.effort, args.desc, args.note)
+
+    if args.verbose and not args.batch:
+        print(data.get_project(), data.url_data())
+        print(data.xml_data())
 
     cookiefile = tempfile.NamedTemporaryFile(prefix="tk")
     auth = netrc.netrc().authenticators(url[8:-1])
