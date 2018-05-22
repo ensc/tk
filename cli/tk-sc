@@ -22,6 +22,7 @@ import urllib.parse
 import sys
 import os
 import functools
+import json
 
 class P:
     def __init__(self, uuid, short, id, tm_start = None, tm_end = None, desc = None):
@@ -180,14 +181,18 @@ class Date:
 class DataSet:
     def __init__(self, project, date, span, desc, notes = None):
         try:
-            idx = _projects.index(project)
+            if project.startswith('@'):
+                uuid = project[1:]
+            else:
+                idx = _projects.index(project)
+                uuid = _projects[idx].uuid
         except ValueError:
             print("No such project; available ones:\n" +
                   '\n'.join(map(lambda x: "  %s" %x ,
                                 sorted(_projects, key=lambda x: x.short))) + '\n')
             raise Exception("")
 
-        self.__project = _projects[idx].uuid
+        self.__project = uuid
         self.__date    = Date(date)
         self.__span    = TimeSpan(span)
         self.__desc    = desc
@@ -205,11 +210,29 @@ class DataSet:
             "NotInvoiceable" : self.__span.str_duration(1),
         }
 
+    def xml_data(self):
+        return {
+            "Date" : self.__date.str_dash(),
+            "ParentKey" : self.__project,
+            "ParentType" : 1,
+            "SkipDuplicateValidation" : "False",
+            "From" : self.__span.str_start(),
+            "To"   : self.__span.str_end(),
+            "Effort" : self.__span.str_duration(0),
+            "Break" : 0,
+            "NotInvoiceable" : self.__span.str_duration(1),
+            "InternalComments" : self.__notes,
+            "ExternalComments" : self.__desc,
+        }
+
     def get_project(self):
         return self.__project
 
     def url(self, base):
         return base + self.__project
+
+    def xml_url(self, base):
+        return base
 
     def url_stats(self, base):
         return base + "date=" + self.__date.str_dash()
@@ -317,32 +340,58 @@ def main():
     c.perform()
     assert(c.getinfo(c.HTTP_CODE) in [200, 302])
 
-    c.setopt(c.URL, data.url(url + "/Times/AddPlanned/"))
+    xx_data = []
+    c.setopt(c.URL, data.xml_url(url + "Times/Keeping"))
     c.setopt(c.POST, 1)
     c.setopt(c.VERBOSE, 0)
-    c.setopt(c.POSTFIELDS, urllib.parse.urlencode(data.url_data()))
-
-    hdr.reset()
-    c.perform()
-    if hdr.is_redirection():
-        print("Submitted", hdr.get_redirection(url).decode('ascii'))
-
-    assert(c.getinfo(c.HTTP_CODE) in [200, 302])
-
-    xx_data = []
-    c.setopt(c.URL, data.url_stats(url + "/Times/Stats?"))
-    c.setopt(c.POST, 0)
-    c.setopt(c.VERBOSE, 0)
     c.setopt(c.WRITEFUNCTION, lambda x: xx_data.append(x))
-    c.setopt(c.POSTFIELDS, urllib.parse.urlencode(data.url_data()))
+    c.setopt(c.POSTFIELDS, urllib.parse.urlencode(data.xml_data()))
+    c.setopt(c.HTTPHEADER, [ 'X-Requested-With: XMLHttpRequest' ])
 
     hdr.reset()
     c.perform()
-    assert(c.getinfo(c.HTTP_CODE) in [200, 302])
 
-    import json
-    print(json.decoder.JSONDecoder()
-          .raw_decode(bytes.decode(b''.join(xx_data))))
+    result = json.decoder.JSONDecoder().raw_decode(bytes.decode(b''.join(xx_data)))
+    code = c.getinfo(c.HTTP_CODE)
+    is_ok = False
+
+    if code == 200:
+        if args.batch:
+            print('OK %s' % result[0]['Key'])
+        else:
+            print('submitted: %sTimes/Edit/%s' % (url, result[0]['Key']))
+
+        is_ok = True
+    elif code == 500:
+        if args.batch:
+            print("ERROR %s" % result[0]['Message'])
+        else:
+            print("%s %s" % (result[0]['MessageType'], result[0]['Message']))
+    else:
+        if args.batch:
+            print("BADCODE %s" % code)
+        else:
+            print("unexpeccte code %s" % code)
+
+        exit(2)
+
+    if not args.batch:
+        xx_data = []
+        c.setopt(c.URL, data.url_stats(url + "/Times/Stats?"))
+        c.setopt(c.POST, 0)
+        c.setopt(c.VERBOSE, 0)
+        c.setopt(c.WRITEFUNCTION, lambda x: xx_data.append(x))
+        c.setopt(c.POSTFIELDS, urllib.parse.urlencode(data.url_data()))
+
+        hdr.reset()
+        c.perform()
+        assert(c.getinfo(c.HTTP_CODE) in [200, 302])
+
+        print(json.decoder.JSONDecoder()
+              .raw_decode(bytes.decode(b''.join(xx_data))))
+
+    return is_ok
 
 if __name__ == '__main__':
-    main()
+    if not main():
+        exit(1)
