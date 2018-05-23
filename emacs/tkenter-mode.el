@@ -227,24 +227,25 @@
 		 (ensc/tkenter-format-effort  sum-project)
 		 (nth 2 sum-project))))))
 
-(defmacro ensc/tkenter-within-cell (buf &rest body)
+(defmacro ensc/tkenter-within-cell (&rest body)
   ""
   (declare (indent 0) (debug t))
-  `(when (and ensc/tkenter-mode
-	      (or (not ,buf) (eq (current-buffer) ,buf))
-	      (string-equal major-mode "org-mode")
-	      (org-at-table-p)
+  `(when (and (org-at-table-p)
 	      (not (org-at-table-hline-p)))
-    (let ((col (org-table-current-column))
-	  (row (org-table-current-line)))
-      (when (and (/= col 0)(/= row 0))
-	(progn ,@body)))))
+     (let ((col (org-table-current-column))
+	   (row (org-table-current-line)))
+       (when (and (/= col 0)(/= row 0))
+	 (progn ,@body)))))
 
 (defun ensc/tkenter-idle-fn (buf)
-  (ensc/tkenter-within-cell buf
-			    (if ensc/tkenter-skip-timer
-				(setq ensc/tkenter-skip-timer nil)
-			      (ensc/tkenter-run col row))))
+  (when (and ensc/tkenter-mode
+	     (or (not ,buf) (eq (current-buffer) ,buf))
+	     (string= major-mode "org-mode"))
+    (ignore-errors
+      (ensc/tkenter-within-cell
+	(if ensc/tkenter-skip-timer
+	    (setq ensc/tkenter-skip-timer nil)
+	  (ensc/tkenter-run col row))))))
 
 (defun ensc/tkenter-normalize-date (text-old)
   (format-time-string " %d.%m. " (ensc/tkenter-parse-date text-old)))
@@ -278,8 +279,8 @@
 (defun ensc/tkenter-normalize-cell ()
   (interactive)
   (ignore-errors
-    (ensc/tkenter-within-cell nil
-			      (ensc/_tkenter-normalize-cell col row)))
+    (ensc/tkenter-within-cell
+      (ensc/_tkenter-normalize-cell col row)))
   (org-cycle))
 
 ;;; autoload
@@ -351,7 +352,6 @@
 (defun ensc/tkenter-transmit ()
   (interactive)
   (ensc/tkenter-within-cell
-    nil
     (setq ensc/tkenter-skip-timer t)
     (unwind-protect
 	(let ((col (org-table-current-column))
