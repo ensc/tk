@@ -72,37 +72,37 @@
 	(has-num nil)
 	(elems-tot '())
 	(elems-exc '()))
-  (loop for c across effort do
-	(cond
-	 ((= c ?+) nil)
-	 ((= c ?:)
-	  (progn
-	    (if is-exc
-		(setq elems-exc (append (list number) elems-exc))
-	      (setq elems-tot (append (list number) elems-tot)))
-	    (setq number 0
-		  has-num t)))
-	 ((= c ?X)
-	  (progn
-	    (when is-exc
-	      (error "'X' already specified"))
-	    (when has-num
-	      (setq elems-tot (append (list number) elems-tot)
-		    number 0
-		    is-exc t
-		    has-num nil))))
-	 ((and (>= c ?0) (<= c ?9))
-	  (setq number (+(* number 10) (- c ?0))
-		has-num t))
-	 (t
-	  (error "Bad character"))))
-  (when has-num
-    (if is-exc
-	(setq elems-exc (append (list number) elems-exc))
-      (setq elems-tot (append (list number) elems-tot))))
-  ;(message "effort %s -> %s / %s" orig-effort elems-tot elems-exc)
-  (list (ensc/tkenter-convert-effort elems-tot)
-	(ensc/tkenter-convert-effort elems-exc))))
+    (loop for c across effort do
+	  (cond
+	   ((= c ?+) nil)
+	   ((= c ?:)
+	    (progn
+	      (if is-exc
+		  (setq elems-exc (append (list number) elems-exc))
+		(setq elems-tot (append (list number) elems-tot)))
+	      (setq number 0
+		    has-num t)))
+	   ((= c ?X)
+	    (progn
+	      (when is-exc
+		(error "'X' already specified"))
+	      (when has-num
+		(setq elems-tot (append (list number) elems-tot)
+		      number 0
+		      is-exc t
+		      has-num nil))))
+	   ((and (>= c ?0) (<= c ?9))
+	    (setq number (+(* number 10) (- c ?0))
+		  has-num t))
+	   (t
+	    (error "Bad character"))))
+    (when has-num
+      (if is-exc
+	  (setq elems-exc (append (list number) elems-exc))
+	(setq elems-tot (append (list number) elems-tot))))
+					;(message "effort %s -> %s / %s" orig-effort elems-tot elems-exc)
+    (list (ensc/tkenter-convert-effort elems-tot)
+	  (ensc/tkenter-convert-effort elems-exc))))
 
 (defun ensc/tkenter-summary (key col)
   (let ((row 2)
@@ -306,10 +306,8 @@
 	       (org-table-get-remote-range "project-mapping" "@2$1..@>$2")
 	       project)))
     (unless uuid
-      (error "No such project %s" project)
-      
-      )
-    
+      (error "No such project %s" project))
+
     (substring-no-properties uuid)))
 
 (defun ensc/_tkenter-transmit (col row)
