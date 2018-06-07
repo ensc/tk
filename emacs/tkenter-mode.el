@@ -310,10 +310,13 @@
 (defun ensc/tkenter-unittest-parse-effort (effort exp)
   (assert (equal (ensc/tkenter-parse-effort effort) exp)))
 
+(defun ensc/tkenter-translate-project-raw (project)
+  (lax-plist-get
+   (org-table-get-remote-range "project-mapping" "@2$1..@>$2")
+   project))
+
 (defun ensc/tkenter-translate-project (project)
-  (let ((uuid (lax-plist-get
-	       (org-table-get-remote-range "project-mapping" "@2$1..@>$2")
-	       project)))
+  (let ((uuid (ensc/tkenter-translate-project-raw project)))
     (unless uuid
       (error "No such project %s" project))
 
