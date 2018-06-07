@@ -261,7 +261,9 @@
   (format-time-string " %d.%m. " (ensc/tkenter-parse-date text-old)))
 
 (defun ensc/tkenter-normalize-project (text-old)
-  text-old)
+  (if (not (ensc/tkenter-translate-project-raw text-old))
+      (propertize text-old 'face '(:foreground "red"))
+    text-old))
 
 (defun ensc/tkenter-normalize-effort (text-old)
   (let* ((effort    (ensc/tkenter-parse-effort text-old))
