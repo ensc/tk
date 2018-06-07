@@ -22,6 +22,12 @@
   :type 'string
   :group 'enter/tkenter)
 
+(defcustom ensc/tkenter-num-header-rows
+  2
+  "The number of header lines"
+  :type 'int
+  :group 'ensc/tkenter)
+
 (defcustom ensc/tkenter-columns
   '((:date . 1)
     (:project . 2)
@@ -368,20 +374,28 @@
 (defun ensc/_tkenter-find-todo (col row rel)
   (let ((moved nil))
     (save-excursion
+      ;; when we are at a hline, move to the next/prev line
       (while (org-at-table-hline-p)
 	(setq row (+ row rel)
 	      moved t)
 	(org-table-goto-line row)))
+    ;; unless we fixed our position already, go on step in the desired
+    ;; direction
     (unless moved
       (setq row (+ row rel))))
+
   (let (result (url t))
     (while (and url (not result))
       (setq url (org-table-get row (ensc/tkenter-column-get :url)))
       (if (string= url "")
 	  (setq result row)
 	(setq row (+ row rel))))
-    (if (and result (> row 2))
-	(org-table-goto-line result)
+    ;; when we are still inside the table and found an empty line,
+    ;; change position
+    (if (and result (> row ensc/tkenter-num-header-rows))
+	(progn
+	  (org-table-goto-line result)
+	  (org-table-goto-column col))
       (setq ensc/tkenter-skip-timer t)
       (message "You are a hero! Everything is complete!"))))
 
