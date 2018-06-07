@@ -344,21 +344,23 @@ def main():
     assert(c.getinfo(c.HTTP_CODE) in [200, 302])
 
     xx_data = []
+    hdr.reset()
     c.setopt(c.URL, data.xml_url(url + "Times/Keeping"))
     c.setopt(c.POST, 1)
     c.setopt(c.VERBOSE, 0)
     c.setopt(c.WRITEFUNCTION, lambda x: xx_data.append(x))
     c.setopt(c.POSTFIELDS, urllib.parse.urlencode(data.xml_data()))
     c.setopt(c.HTTPHEADER, [ 'X-Requested-With: XMLHttpRequest' ])
+    c.setopt(c.HEADERFUNCTION, hdr.write)
 
     hdr.reset()
     c.perform()
 
-    result = json.decoder.JSONDecoder().raw_decode(bytes.decode(b''.join(xx_data)))
     code = c.getinfo(c.HTTP_CODE)
     is_ok = False
 
     if code == 200:
+        result = json.decoder.JSONDecoder().raw_decode(bytes.decode(b''.join(xx_data)))
         if args.batch:
             print('OK %s' % result[0]['Key'])
         else:
@@ -366,13 +368,19 @@ def main():
 
         is_ok = True
     elif code == 500:
+        result = json.decoder.JSONDecoder().raw_decode(bytes.decode(b''.join(xx_data)))
         if args.batch:
             print("ERROR %s" % result[0]['Message'])
         else:
             print("%s %s" % (result[0]['MessageType'], result[0]['Message']))
+    elif code == 400:
+        if args.batch:
+            print("BADTRANS %s" % hdr.get_status_msg())
+        else:
+            print("unexpeccte code %s" % code)
     else:
         if args.batch:
-            print("BADCODE %s" % code)
+            print("BADCODE %s %s" % (code, xx_data))
         else:
             print("unexpeccte code %s" % code)
 
