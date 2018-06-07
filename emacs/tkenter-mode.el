@@ -239,7 +239,7 @@
 
 (defun ensc/tkenter-idle-fn (buf)
   (when (and ensc/tkenter-mode
-	     (or (not ,buf) (eq (current-buffer) ,buf))
+	     (or (not buf) (eq (current-buffer) buf))
 	     (string= major-mode "org-mode"))
     (ignore-errors
       (ensc/tkenter-within-cell
