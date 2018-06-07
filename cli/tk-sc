@@ -248,6 +248,9 @@ class HttpHeader:
         self.__hdrs = {}
         self.__status = None
 
+    def get_status_msg(self):
+        return self.__status[2].strip().decode('iso8859-1')
+
     def write(self, s):
         l = len(s)
         s = s.strip()
