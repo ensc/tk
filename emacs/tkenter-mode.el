@@ -371,10 +371,7 @@
 	      (row (org-table-current-line)))
 	  (when (and (/= col 0)(/= row 0))
 	    (ensc/_tkenter-transmit col row)))
-      (next-line)
-      (while (and (org-at-table-p)
-		  (org-at-table-hline-p))
-	(next-line)))))
+      (ensc/_tkenter-find-todo col row +1))))
 
 (defun ensc/_tkenter-find-todo (col row rel)
   (let ((moved nil))
