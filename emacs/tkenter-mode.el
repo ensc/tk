@@ -6,6 +6,8 @@
   (let ((map (make-sparse-keymap)))
     (define-key map [tab] 'ensc/tkenter-normalize-cell)
     (define-key map (kbd "C-c t") 'ensc/tkenter-transmit)
+    (define-key map [C-S-up] 'ensc/tkenter-find-todo-prev)
+    (define-key map [C-S-down] 'ensc/tkenter-find-todo-next)
     map))
 
 (defcustom ensc/tkenter-cli-program
@@ -362,6 +364,45 @@
       (while (and (org-at-table-p)
 		  (org-at-table-hline-p))
 	(next-line)))))
+
+(defun ensc/_tkenter-find-todo (col row rel)
+  (let ((moved nil))
+    (save-excursion
+      (while (org-at-table-hline-p)
+	(setq row (+ row rel)
+	      moved t)
+	(org-table-goto-line row)))
+    (unless moved
+      (setq row (+ row rel))))
+  (let (result (url t))
+    (while (and url (not result))
+      (setq url (org-table-get row (ensc/tkenter-column-get :url)))
+      (if (string= url "")
+	  (setq result row)
+	(setq row (+ row rel))))
+    (if (and result (> row 2))
+	(org-table-goto-line result)
+      (setq ensc/tkenter-skip-timer t)
+      (message "You are a hero! Everything is complete!"))))
+
+(defun ensc/tkenter-find-todo (rel)
+  (when (and (org-at-table-p))
+    (let ((col (org-table-current-column))
+	  (row (org-table-current-line)))
+      (when (and (/= col 0)(/= row 0))
+	(unwind-protect
+	    (let ((col (org-table-current-column))
+		  (row (org-table-current-line)))
+	      (when (and (/= col 0)(/= row 0))
+		(ensc/_tkenter-find-todo col row rel))))))))
+
+(defun ensc/tkenter-find-todo-prev ()
+  (interactive)
+  (ensc/tkenter-find-todo -1))
+
+(defun ensc/tkenter-find-todo-next ()
+  (interactive)
+  (ensc/tkenter-find-todo +1))
 
 (defun ensc/tkenter-unittest ()
   (ensc/tkenter-unittest-parse-effort "1"        '(  3600     0))
