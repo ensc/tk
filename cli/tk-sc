@@ -302,6 +302,8 @@ def main():
                         default = False)
     parser.add_argument("--verbose", action = 'store_const', const = 'verbose',
                         default = False)
+    parser.add_argument('--phase-info', action = 'store_const', const = 'phase_info',
+                        default = False)
 
     parser.add_argument('project', metavar='<project>', type=str, help='project')
     parser.add_argument('date',    metavar='<date>',    type=str, help='the date')
@@ -342,6 +344,23 @@ def main():
     hdr.reset()
     c.perform()
     assert(c.getinfo(c.HTTP_CODE) in [200, 302])
+
+    ### TODO: not working...
+    if args.phase_info:
+        xx_data = []
+
+        c.setopt(c.URL, url + "Tasks/Details/" + data.get_project())
+        c.setopt(c.POST, 0)
+        c.setopt(c.VERBOSE, 1)
+        c.setopt(c.WRITEFUNCTION, lambda x: xx_data.append(x))
+        #c.setopt(c.POSTFIELDS, urllib.parse.urlencode(data.xml_data()))
+        c.setopt(c.HTTPHEADER, [ 'X-Requested-With: XMLHttpRequest' ])
+        c.setopt(c.HEADERFUNCTION, hdr.write)
+
+        hdr.reset()
+        c.perform()
+
+        return 0
 
     xx_data = []
     c.setopt(c.URL, data.xml_url(url + "Times/Keeping"))
