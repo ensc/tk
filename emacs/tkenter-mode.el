@@ -204,6 +204,8 @@
   (let ((res project)
 	(inhibit-modification-hooks t))
     (put-text-property 0 (length res) 'face '(:inherit bold) res)
+    (when (not (ensc/tkenter-translate-project-raw project))
+      (put-text-property 0 (length res) 'face '(:foreground "red") res))
     res))
 
 
