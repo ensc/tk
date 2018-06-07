@@ -344,7 +344,6 @@ def main():
     assert(c.getinfo(c.HTTP_CODE) in [200, 302])
 
     xx_data = []
-    hdr.reset()
     c.setopt(c.URL, data.xml_url(url + "Times/Keeping"))
     c.setopt(c.POST, 1)
     c.setopt(c.VERBOSE, 0)
