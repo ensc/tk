@@ -100,6 +100,71 @@ cond=()
 test -z "$date_start" || cond+=( "tm >= ${date_start}" )
 test -z "$date_end" || cond+=( "tm < ${date_end}" )
 
+_colorize() {
+    python /proc/self/fd/3 "$emphasize_mode" 3<<"EOF"
+import sys
+last_date = None
+last_pid =None
+cols = [
+  '\033[1;38;5;88m',
+  '\033[1;38;5;21m',
+]
+
+pid_cols = [
+  '\033[38;5;18m',
+  '\033[38;5;88m',
+]
+
+col_off = '\033[0;39m'
+col_emph = '\033[1m'
+col_deemph = '\033[90m'
+col_idx = 0
+pid_idx = 0
+
+emph_mode = int(sys.argv[1])
+
+for l in sys.stdin.readlines():
+    l = l.strip().split('\t')
+    try:
+        date = l[0].split(' ', 1)
+        is_same = (date[0] == last_date)
+        if not is_same:
+           if last_date != None:
+               print('\033[4m%232s%s\n' % ('', col_off))
+           col_idx = (col_idx + 1) % len(cols)
+           last_date = date[0]
+        l[0] = "%s%s%s %s" % (cols[col_idx], date[0], col_off, date[1])
+    except:
+        pass
+
+    if emph_mode == 1:
+       # buffer
+       if l[1] == "1":
+           c = col_emph
+       else:
+           c = col_deemph
+           
+       l[1] = "%s%s%s" % (c, l[1], col_off)
+       l[2] = "%-200s" % ("%s%s%s" % (c, l[2], col_off))
+       l[3] = "%8s" % l[3]
+    elif emph_mode == 2:
+       # window
+       if l[2].startswith('Emacs: '):
+           last_pid = None
+           continue
+
+       if l[1] != last_pid:
+           pid_idx = (pid_idx + 1) % len(pid_cols)
+           last_pid = l[1]
+
+       #l[1] = "%s%s%s" % (pid_cols[pid_idx], l[1], col_off)
+       l[2] = "%s%s%s" % (pid_cols[pid_idx], l[2], col_off)
+       del l[1]           
+
+    print('\t'.join(l))
+EOF
+}
+
 _run_query() {
     local query=$1
     local post=$2
@@ -115,7 +180,7 @@ _run_query() {
 
     for f in "$@"; do
 	sqlite3 -separator '	' "$f" "$query $post"
-    done
+    done | _colorize
 }
 
 run_buffer() {
@@ -125,6 +190,8 @@ run_buffer() {
     cond+=( "TRIM(file) IS NOT ''" )
     cond+=( "enter" )
 
+    local emphasize_mode=1
+
     _run_query "$query" "order by tm" "$@"
 }
 
@@ -133,6 +200,8 @@ run_focus() {
 
     cond+=( "focus" )
 
+    local emphasize_mode=0
+    
     _run_query "$query" "order by tm" "$@"
 }
 
@@ -141,6 +210,8 @@ run_window() {
 
     cond+=( "focus" )
 
+    local emphasize_mode=2
+    
     _run_query "$query" "order by tm" "$@"
 }
 
