@@ -34,7 +34,10 @@
     (:effort . 3)
     (:desc . 4)
     (:note . 5)
-    (:url . 6))
+    (:url . 6)
+    (:mapping-project . 1)
+    (:mapping-pushed  . 5)
+    (:mapping-pending . 6))
   "column; date, project, effort, description"
   :type 'sexp
   :group 'ensc/tkenter)
@@ -419,6 +422,100 @@
 (defun ensc/tkenter-find-todo-next ()
   (interactive)
   (ensc/tkenter-find-todo +1))
+
+(defun ensc/tkenter-find-table (table-id)
+  (let (id-loc buffer loc)
+    (org-with-wide-buffer
+     (goto-char (point-min))
+     (if (re-search-forward
+	  (concat "^[ \t]*#\\+\\(tbl\\)?name:[ \t]*"
+		  (regexp-quote table-id) "[ \t]*$")
+	  nil t)
+	 (setq buffer (current-buffer) loc (match-beginning 0))
+       (setq id-loc (org-id-find table-id 'marker))
+       (unless (and id-loc (markerp id-loc))
+	 (user-error "Can't find table \"%s\"" table-id))
+       (setq buffer (marker-buffer id-loc)
+	     loc (marker-position id-loc)))
+
+     (with-current-buffer buffer
+       (goto-char loc)
+       (forward-char 1)
+       (unless (and (re-search-forward "^\\(\\*+ \\)\\|^[ \t]*|" nil t)
+		    (not (match-beginning 1)))
+	 (user-error "Cannot find a table at NAME or ID %s" table-id))
+       (setq loc (point))))
+
+    (list buffer loc)))
+
+(defun ensc/tkenter-get-project-stats (project)
+  (let ((efforts-table-pos (ensc/tkenter-find-table "efforts"))
+	(row 2)
+	(effort-pushed 0)
+	(effort-pending 0)
+	cur effort url tmp-effort)
+    (with-current-buffer (car efforts-table-pos)
+      (org-with-wide-buffer
+       (goto-char (nth 1 efforts-table-pos))
+
+       (while (setq effort (org-table-get row (ensc/tkenter-column-get :effort))
+		    cur (org-table-get row (ensc/tkenter-column-get :project))
+		    url (org-table-get row (ensc/tkenter-column-get :url)))
+	 (when (string-equal cur project)
+	   (setq tmp-effort (car (ensc/tkenter-parse-effort effort)))
+
+	   (if (string-equal url "")
+	       (setq effort-pending (+ effort-pending tmp-effort))
+	     (setq effort-pushed (+ effort-pushed tmp-effort))))
+
+	 (setq row (1+ row)))))
+
+    (list effort-pushed effort-pending)))
+
+(defun ensc/tkenter-format-mapping-effort (effort style)
+  (let ((res (ensc/tkenter-format-effort-single effort)))
+    (case style
+      (:pushed
+       (when (= effort 0)
+	 (put-text-property 0 (length res) 'face '(:foreground "red") res)
+	 (setq res (concat "*" res "*"))))
+
+      (:pending
+       (unless (= effort 0)
+	 (put-text-property 0 (length res) 'face '(:foreground "red") res)
+	 (setq res (concat "*" res "*"))))
+      )
+
+    (concat " " res " ")))
+
+(defun ensc/tkenter-update-mapping-table ()
+  (interactive)
+  (let ((mapping-table-pos (ensc/tkenter-find-table "project-mapping"))
+	(row 2)
+	(effort-pushed 0)
+	(effort-pending 0)
+	cur effort url tmp-effort)
+    (with-current-buffer (car mapping-table-pos)
+      (org-with-wide-buffer
+       (goto-char (nth 1 mapping-table-pos))
+
+       (while (setq project (org-table-get row (ensc/tkenter-column-get :mapping-project)))
+	 (unless (string-equal project "")
+	   (setq tmp-effort (ensc/tkenter-get-project-stats project))
+
+	   (org-table-put row (ensc/tkenter-column-get :mapping-pushed)
+			  (if (equal tmp-effort '(0 0))
+			      ""
+			    (ensc/tkenter-format-mapping-effort (nth 0 tmp-effort) :pushed))))
+
+	   (org-table-put row (ensc/tkenter-column-get :mapping-pending)
+			  (if (equal tmp-effort '(0 0))
+			      ""
+			    (ensc/tkenter-format-mapping-effort (nth 1 tmp-effort) :pending)))
+
+	 (setq row (1+ row)))
+       (goto-char (nth 1 mapping-table-pos))
+       (org-table-align)))))
 
 (defun ensc/tkenter-unittest ()
   (ensc/tkenter-unittest-parse-effort "1"        '(  3600     0))
