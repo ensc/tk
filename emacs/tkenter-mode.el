@@ -461,7 +461,7 @@
        (goto-char (nth 1 efforts-table-pos))
 
        (while (setq effort (org-table-get row (ensc/tkenter-column-get :effort))
-		    cur (org-table-get row (ensc/tkenter-column-get :project))
+		    cur (ensc/tkenter-get-project row)
 		    url (org-table-get row (ensc/tkenter-column-get :url)))
 	 (when (string-equal cur project)
 	   (setq tmp-effort (car (ensc/tkenter-parse-effort effort)))
