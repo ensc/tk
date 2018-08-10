@@ -55,8 +55,10 @@
   (let ((text nil)
 	(col-idx (ensc/tkenter-column-get col)))
     (while (and (not text)(> row 0))
-      (setq text (substring-no-properties (org-table-get row col-idx))
+      (setq text (org-table-get row col-idx)
 	    row (1- row))
+      (when text
+	(setq text (substring-no-properties text)))
       (when (string= text "")
 	(setq text nil)))
     text))
