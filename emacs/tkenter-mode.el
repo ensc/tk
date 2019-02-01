@@ -28,6 +28,12 @@
   :type 'int
   :group 'ensc/tkenter)
 
+(defcustom ensc/tkenter-project-mapping-range
+  "@2$2..@>>$3"
+  "Subtable range with project-uuid mapping"
+  :type 'string
+  :group 'ensc/tkenter)
+
 (defcustom ensc/tkenter-columns
   '((:date . 1)
     (:project . 2)
@@ -319,7 +325,7 @@
 
 (defun ensc/tkenter-translate-project-raw (project)
   (lax-plist-get
-   (org-table-get-remote-range "project-mapping" "@2$1..@>$2")
+   (org-table-get-remote-range "project-mapping" ensc/tkenter-project-mapping-range)
    project))
 
 (defun ensc/tkenter-translate-project (project)
