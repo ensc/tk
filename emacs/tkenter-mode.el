@@ -178,9 +178,18 @@
 
     res))
 
+(defun ensc/tkenter-buffer-time ()
+  (let* ((heading (plist-get (org-export-get-environment) :date))
+	 (heading (and heading (substring-no-properties (car heading)))))
+    (decode-time
+     (when (and heading
+		(string-match ".*\\<\\([0-9]\\{4\\}\\)-\\([0-9]\\{2\\}\\)\\>" heading))
+       (encode-time 0 0 0 1
+		    (string-to-number (match-string 2 heading))
+		    (string-to-number (match-string 1 heading)))))))
+
 (defun ensc/tkenter-parse-date (date &optional now)
-  (let ((now (or now (decode-time)))
-	(res '())
+  (let ((res '())
 	(num 0)
 	(has-num 0))
     (loop for c across date do
@@ -198,7 +207,7 @@
       (setq res (append res (list num))))
 
     (when (< (length res) 3)
-      (setq res (append res (nthcdr (+ 3 (length res)) now))))
+      (setq res (append res (nthcdr (+ 3 (length res)) (or now ensc/tkenter-mode-now)))))
 
     (encode-time 0 0 0
 		 (nth 0 res)
@@ -311,6 +320,9 @@
   :keymap ensc/tkenter-keymap
   (if ensc/tkenter-mode
       (progn
+	(make-variable-buffer-local 'ensc/tkenter-mode-now)
+	(setq ensc/tkenter-mode-now (ensc/tkenter-buffer-time))
+
 	(add-hook 'kill-buffer-hook
 		  (lambda () (when (timerp ensc/tkenter-idle-timer)
 			       (cancel-timer ensc/tkenter-idle-timer))))
