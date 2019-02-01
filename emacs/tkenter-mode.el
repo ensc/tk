@@ -20,7 +20,7 @@
   "https://tk-sc.intern.sigma-chemnitz.de"
   "The TK uri"
   :type 'string
-  :group 'enter/tkenter)
+  :group 'ensc/tkenter)
 
 (defcustom ensc/tkenter-num-header-rows
   2
