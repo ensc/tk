@@ -124,7 +124,7 @@ pid_idx = 0
 emph_mode = int(sys.argv[1])
 
 for l in sys.stdin.readlines():
-    l = l.strip().split('\t')
+    l = list(map(lambda x: x.strip(), l.split('\t')))
     try:
         date = l[0].split(' ', 1)
         is_same = (date[0] == last_date)
