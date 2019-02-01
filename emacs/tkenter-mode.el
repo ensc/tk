@@ -41,9 +41,11 @@
     (:desc . 4)
     (:note . 5)
     (:url . 6)
-    (:mapping-project . 1)
-    (:mapping-pushed  . 5)
-    (:mapping-pending . 6))
+    (:mapping-project . 2)
+    (:mapping-pushed  . 6)
+    (:mapping-pending . 7)
+    (:mapping-fee . 8)
+    (:mapping-sales . 9))
   "column; date, project, effort, description"
   :type 'sexp
   :group 'ensc/tkenter)
@@ -508,6 +510,9 @@
 
     (concat " " res " ")))
 
+(defun ensc/tkenter-format-mapping-sale (effort fee)
+  (format "%.2f" (/ (* effort fee) 3600.0)))
+
 (defun ensc/tkenter-update-mapping-table ()
   (interactive)
   (let ((mapping-table-pos (ensc/tkenter-find-table "project-mapping"))
@@ -521,7 +526,8 @@
 
        (while (setq project (org-table-get row (ensc/tkenter-column-get :mapping-project)))
 	 (unless (string-equal project "")
-	   (setq tmp-effort (ensc/tkenter-get-project-stats project))
+	   (setq tmp-effort (ensc/tkenter-get-project-stats project)
+		 tmp-fee (substring-no-properties (org-table-get row (ensc/tkenter-column-get :mapping-fee))))
 
 	   (org-table-put row (ensc/tkenter-column-get :mapping-pushed)
 			  (if (equal tmp-effort '(0 0))
@@ -533,8 +539,16 @@
 			      ""
 			    (ensc/tkenter-format-mapping-effort (nth 1 tmp-effort) :pending)))
 
-	 (setq row (1+ row)))
+	   (org-table-put row (ensc/tkenter-column-get :mapping-sales)
+			  (if (or (not tmp-fee) (string-equal tmp-fee "") (equal tmp-effort '(0 0)))
+			      ""
+			    (ensc/tkenter-format-mapping-sale
+			     (+ (nth 0 tmp-effort) (nth 1 tmp-effort))
+			     (string-to-number tmp-fee))))
+
+	   (setq row (1+ row)))
        (goto-char (nth 1 mapping-table-pos))
+       (org-table-recalculate 'iterate t)
        (org-table-align)))))
 
 (defun ensc/tkenter-unittest ()
