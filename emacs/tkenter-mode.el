@@ -350,7 +350,7 @@
 
     (substring-no-properties uuid)))
 
-(defun ensc/_tkenter-transmit (col row)
+(defun ensc/_tkenter-transmit (col row &optional force)
   (let* ((date    (ensc/tkenter-parse-date (ensc/tkenter-get-non-null row :date)))
 	 (project (ensc/tkenter-translate-project (ensc/tkenter-get-non-null row :project)))
 	 (effort  (ensc/tkenter-parse-effort (ensc/tkenter-get-non-null row :effort)))
@@ -359,7 +359,7 @@
 	 (url     (org-table-get row (ensc/tkenter-column-get :url)))
 	 (result  nil))
 
-    (when (not (string= url ""))
+    (when (and (not force) (not (string= url "")))
       (error "Already submitted!"))
 
     (setq result (with-temp-buffer
@@ -388,7 +388,7 @@
      (t
       (error "Failed to submit data: %s" result)))))
 
-(defun ensc/tkenter-transmit ()
+(defun ensc/tkenter-transmit (&optional force)
   (interactive)
   (ensc/tkenter-within-cell
     (setq ensc/tkenter-skip-timer t)
@@ -396,7 +396,7 @@
 	(let ((col (org-table-current-column))
 	      (row (org-table-current-line)))
 	  (when (and (/= col 0)(/= row 0))
-	    (ensc/_tkenter-transmit col row)))
+	    (ensc/_tkenter-transmit col row force)))
       (ensc/_tkenter-find-todo col row +1))))
 
 (defun ensc/_tkenter-find-todo (col row rel)
