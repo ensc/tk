@@ -1,4 +1,5 @@
 (require 'org-table)
+(require 'cl)
 
 (defvar-local ensc/tkenter-idle-timer nil "TK enter timer")
 (defvar-local ensc/tkenter-skip-timer nil "skip idle timer the next time")
