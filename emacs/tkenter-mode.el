@@ -476,6 +476,7 @@
 	(row 2)
 	(effort-pushed 0)
 	(effort-pending 0)
+	(effort-neg 0)
 	cur effort url tmp-effort)
     (with-current-buffer (car efforts-table-pos)
       (org-with-wide-buffer
@@ -485,7 +486,9 @@
 		    cur (ensc/tkenter-get-project row)
 		    url (org-table-get row (ensc/tkenter-column-get :url)))
 	 (when (string-equal cur project)
-	   (setq tmp-effort (car (ensc/tkenter-parse-effort effort)))
+	   (setq tmp-effort (ensc/tkenter-parse-effort effort))
+	   (setq effort-neg (+ effort-neg (nth 1 tmp-effort)))
+	   (setq tmp-effort (car tmp-effort))
 
 	   (if (string-equal url "")
 	       (setq effort-pending (+ effort-pending tmp-effort))
@@ -493,7 +496,7 @@
 
 	 (setq row (1+ row)))))
 
-    (list effort-pushed effort-pending)))
+    (list effort-pushed effort-pending effort-neg)))
 
 (defun ensc/tkenter-format-mapping-effort (effort style)
   (let ((res (ensc/tkenter-format-effort-single effort)))
@@ -531,20 +534,20 @@
 		 tmp-fee (substring-no-properties (org-table-get row (ensc/tkenter-column-get :mapping-fee))))
 
 	   (org-table-put row (ensc/tkenter-column-get :mapping-pushed)
-			  (if (equal tmp-effort '(0 0))
+			  (if (equal tmp-effort '(0 0 0))
 			      ""
 			    (ensc/tkenter-format-mapping-effort (nth 0 tmp-effort) :pushed))))
 
 	   (org-table-put row (ensc/tkenter-column-get :mapping-pending)
-			  (if (equal tmp-effort '(0 0))
+			  (if (equal tmp-effort '(0 0 0))
 			      ""
 			    (ensc/tkenter-format-mapping-effort (nth 1 tmp-effort) :pending)))
 
 	   (org-table-put row (ensc/tkenter-column-get :mapping-sales)
-			  (if (or (not tmp-fee) (string-equal tmp-fee "") (equal tmp-effort '(0 0)))
+			  (if (or (not tmp-fee) (string-equal tmp-fee "") (equal tmp-effort '(0 0 0)))
 			      ""
 			    (ensc/tkenter-format-mapping-sale
-			     (+ (nth 0 tmp-effort) (nth 1 tmp-effort))
+			     (+ (nth 0 tmp-effort) (nth 1 tmp-effort) (- (nth 2 tmp-effort)))
 			     (string-to-number tmp-fee))))
 
 	   (setq row (1+ row)))
