@@ -101,8 +101,9 @@ test -z "$date_start" || cond+=( "tm >= ${date_start}" )
 test -z "$date_end" || cond+=( "tm < ${date_end}" )
 
 _colorize() {
-    python /proc/self/fd/3 "$emphasize_mode" 3<<"EOF"
+    python3 /proc/self/fd/3 "$emphasize_mode" 3<<"EOF"
 import sys
+sys.stdin.reconfigure(errors = 'ignore')
 last_date = None
 last_pid =None
 cols = [
