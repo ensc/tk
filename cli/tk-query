@@ -144,12 +144,15 @@ for l in sys.stdin.readlines():
            c = col_emph
        else:
            c = col_deemph
-           
+
        l[1] = "%s%s%s" % (c, l[1], col_off)
        l[2] = "%-200s" % ("%s%s%s" % (c, l[2], col_off))
        l[3] = "%8s" % l[3]
     elif emph_mode == 2:
        # window
+       if len(l) < 3:
+           continue
+
        if l[2].startswith('Emacs: '):
            last_pid = None
            continue
@@ -160,7 +163,7 @@ for l in sys.stdin.readlines():
 
        #l[1] = "%s%s%s" % (pid_cols[pid_idx], l[1], col_off)
        l[2] = "%s%s%s" % (pid_cols[pid_idx], l[2], col_off)
-       del l[1]           
+       del l[1]
 
     print('\t'.join(l))
 EOF
@@ -202,7 +205,7 @@ run_focus() {
     cond+=( "focus" )
 
     local emphasize_mode=0
-    
+
     _run_query "$query" "order by tm" "$@"
 }
 
@@ -212,7 +215,7 @@ run_window() {
     cond+=( "focus" )
 
     local emphasize_mode=2
-    
+
     _run_query "$query" "order by tm" "$@"
 }
 
