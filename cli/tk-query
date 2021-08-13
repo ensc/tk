@@ -188,7 +188,7 @@ _run_query() {
 }
 
 run_buffer() {
-    local query="select datetime(tm, 'unixepoch', 'localtime'),modified,file,size \
+    local query="select datetime(tm, 'unixepoch', 'localtime'),modified,replace(file, X'0A', ''),size \
  from buffer"
 
     cond+=( "TRIM(file) IS NOT ''" )
@@ -200,7 +200,7 @@ run_buffer() {
 }
 
 run_focus() {
-    local query="select datetime(tm, 'unixepoch', 'localtime'),name from focus"
+    local query="select datetime(tm, 'unixepoch', 'localtime'),replace(name, X'0A', '') from focus"
 
     cond+=( "focus" )
 
@@ -210,7 +210,7 @@ run_focus() {
 }
 
 run_window() {
-    local query="select datetime(tm, 'unixepoch', 'localtime'),pid,name from window_name"
+    local query="select datetime(tm, 'unixepoch', 'localtime'),pid,replace(name, X'0A', '') from window_name"
 
     cond+=( "focus" )
 
