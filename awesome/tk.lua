@@ -36,8 +36,7 @@ function tk.init()
 	connect_signals	= connect_signals,
 	connect_fn	= function(self)
 	    if self.sock_path ~= nil then
-		require("socket.unix")
-		sock = socket.unix()
+		sock = require("socket.unix")()
 		sock:connect(self.sock_path)
 	    else
 		sock = socket.tcp()
