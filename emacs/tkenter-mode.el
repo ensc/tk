@@ -94,7 +94,7 @@
 	(has-num nil)
 	(elems-tot '())
 	(elems-exc '()))
-    (loop for c across effort do
+    (cl-loop for c across effort do
 	  (cond
 	   ((= c ?+) nil)
 	   ((= c ?:)
@@ -195,7 +195,7 @@
   (let ((res '())
 	(num 0)
 	(has-num 0))
-    (loop for c across date do
+    (cl-loop for c across date do
 	  (cond
 	   ((= c ?.)
 	    (setq res (append res (list num))
@@ -336,7 +336,7 @@
   )
 
 (defun ensc/tkenter-unittest-parse-effort (effort exp)
-  (assert (equal (ensc/tkenter-parse-effort effort) exp)))
+  (cl-assert (equal (ensc/tkenter-parse-effort effort) exp)))
 
 (defun ensc/tkenter-translate-project-raw (project)
   (lax-plist-get
@@ -500,7 +500,7 @@
 
 (defun ensc/tkenter-format-mapping-effort (effort style)
   (let ((res (ensc/tkenter-format-effort-single effort)))
-    (case style
+    (cl-case style
       (:pushed
        (when (= effort 0)
 	 (put-text-property 0 (length res) 'face '(:foreground "red") res)

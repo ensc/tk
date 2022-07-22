@@ -86,7 +86,7 @@
 
 (defun ensc/_tk-pack-event (code &rest args)
   "Pack an event"
-  (case code
+  (cl-case code
     (?I '(?I nil))
     (?i '(?i nil))
     (?C (list ?C (ensc/_tk-pack-connect)))
