@@ -368,7 +368,8 @@ def main():
     c.setopt(c.VERBOSE, 0)
     c.setopt(c.WRITEFUNCTION, lambda x: xx_data.append(x))
     c.setopt(c.POSTFIELDS, urllib.parse.urlencode(data.xml_data()))
-    c.setopt(c.HTTPHEADER, [ 'X-Requested-With: XMLHttpRequest' ])
+    c.setopt(c.HTTPHEADER, [ 'X-Requested-With: XMLHttpRequest',
+                             "Referer: " + url + "Times/Keeping" ])
     c.setopt(c.HEADERFUNCTION, hdr.write)
 
     hdr.reset()
