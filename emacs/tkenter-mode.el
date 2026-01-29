@@ -126,21 +126,30 @@
     (list (ensc/tkenter-convert-effort elems-tot)
 	  (ensc/tkenter-convert-effort elems-exc))))
 
-(defun ensc/tkenter-summary (key col)
+(defun ensc/tkenter-summary (key col &optional filter)
   (let ((row 2)
 	(cur nil)
+	(tag nil)
 	(effort nil)
 	(total-effort 0)
 	(total-exc 0)
 	(total-cnt 0)
 	(tmp-effort nil)
-	(is-match nil))
+	(is-match nil)
+	(is-key nil))
     (while (setq effort (org-table-get row (ensc/tkenter-column-get :effort))
+		 tag (and filter (ensc/tkenter-get-desc-tag row))
 		 cur (org-table-get row (ensc/tkenter-column-get col)))
-      (setq is-match
+      (setq is-key
 	    (if (string-equal cur "")
-		is-match
+		is-key
 	      (string-equal cur key)))
+
+      (setq is-match
+	    (and
+	     (or (not filter)
+		 (string-equal tag filter))
+	     is-key))
 
       (when (and is-match effort)
 	(setq tmp-effort (ensc/tkenter-parse-effort effort)
@@ -158,11 +167,19 @@
 (defun ensc/tkenter-get-project (row)
   (ensc/tkenter-get-non-null row :project))
 
+(defun ensc/tkenter-get-desc-tag (row)
+  (let ((desc (ensc/tkenter-get-non-null row :desc)))
+    (when (and desc (string-match "\\[\\([^]]+\\)\\]" desc))
+      (match-string 1 desc))))
+
 (defun ensc/tkenter-summary-date (day)
   (ensc/tkenter-summary day :date))
 
 (defun ensc/tkenter-summary-project (project)
   (ensc/tkenter-summary project :project))
+
+(defun ensc/tkenter-summary-desc (project desc)
+  (ensc/tkenter-summary project :project desc))
 
 (defun ensc/tkenter-format-effort-single (effort &optional split-days)
   (let ((res "")
@@ -223,6 +240,12 @@
     (put-text-property 0 (length res) 'face '(:inherit bold) res)
     res))
 
+(defun ensc/tkenter-format-tag (tag)
+  (let ((res (format "[%s]" tag))
+	(inhibit-modification-hooks t))
+    (put-text-property 0 (length res) 'face '(:inherit bold) res)
+    res))
+
 (defun ensc/tkenter-format-project (project)
   (let ((res project)
 	(inhibit-modification-hooks t))
@@ -244,21 +267,33 @@
       (setq tot-str (concat tot-str exc-str)))
     tot-str))
 
+(defun ensc/tkenter-format-tag-sum (tag sum)
+  (if (and tag sum)
+      (format "    |     %s %s (#%d)"
+	      (ensc/tkenter-format-tag     tag)
+	      (ensc/tkenter-format-effort  sum)
+	      (nth 2 sum))
+    ""))
+
 (defun ensc/tkenter-run (col row)
   (let ((date (ensc/tkenter-get-date row))
-	(project (ensc/tkenter-get-project row)))
+	(project (ensc/tkenter-get-project row))
+	(desc-tag (ensc/tkenter-get-desc-tag row)))
     (when (and date project)
       (let ((sum-day     (ensc/tkenter-summary-date    date))
 	    (date-parsed (ensc/tkenter-parse-date date))
 	    (sum-project (ensc/tkenter-summary-project project))
+	    (sum-desc    (and desc-tag (ensc/tkenter-summary-desc project desc-tag)))
 	    (message-log-max nil))
-	(message "%s %s (#%d)    |     %s: %s (#%d)"
+	(message "%s %s (#%d)    |     %s: %s (#%d)%s"
 		 (ensc/tkenter-format-date date-parsed)
 		 (ensc/tkenter-format-effort sum-day)
 		 (nth 2 sum-day)
 		 (ensc/tkenter-format-project project)
 		 (ensc/tkenter-format-effort  sum-project)
-		 (nth 2 sum-project))))))
+		 (nth 2 sum-project)
+		 (ensc/tkenter-format-tag-sum desc-tag sum-desc)
+		 )))))
 
 (defmacro ensc/tkenter-within-cell (&rest body)
   ""
