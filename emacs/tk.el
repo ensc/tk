@@ -130,6 +130,7 @@
        :host 'local
        :remote (concat (getenv "XDG_RUNTIME_DIR") "/tk.sock")
        :nowait t
+       :service nil
        :coding 'binary
        :sentinel 'ensc/_tk-network-change
        :noquery t)
