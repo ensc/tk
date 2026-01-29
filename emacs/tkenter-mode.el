@@ -18,7 +18,7 @@
   :group 'ensc/tkenter)
 
 (defcustom ensc/tkenter-base-url
-  "https://tk-sc.intern.sigma-chemnitz.de"
+  "https://tk-ses.intern.sigma-chemnitz.de"
   "The TK uri"
   :type 'string
   :group 'ensc/tkenter)
