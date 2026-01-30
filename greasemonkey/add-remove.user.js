@@ -1,9 +1,9 @@
 // ==UserScript==
 // @name        add-remove
 // @namespace   tk
-// @include     https://tk-*c.intern.sigma-chemnitz.de/Employees/Details/*
+// @include     https://tk-*.intern.sigma-chemnitz.de/Employees/Details/*
 // @include     https://tk-*.intern.sigma-chemnitz.de/Tasks/Details/*
-// @version     1.1.3
+// @version     1.1.4
 // @grant       GM.xmlHttpRequest
 // @grant       XMLHttpRequest
 // ==/UserScript==
