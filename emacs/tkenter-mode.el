@@ -1,6 +1,7 @@
+;; -*- lexical-binding: t -*-
 (require 'org-table)
-(require 'cl)
 
+(defvar-local ensc/tkenter-mode-now nil)
 (defvar-local ensc/tkenter-idle-timer nil "TK enter timer")
 (defvar-local ensc/tkenter-skip-timer nil "skip idle timer the next time")
 (defvar ensc/tkenter-keymap
@@ -87,9 +88,7 @@
 	      pos (1+ pos))))))
 
 (defun ensc/tkenter-parse-effort (effort)
-  (let ((result 0)
-	(orig-effort effort)
-	(number 0)
+  (let ((number 0)
 	(is-exc nil)
 	(has-num nil)
 	(elems-tot '())
@@ -283,7 +282,7 @@ Delegates to `ensc/tkenter-extract-desc-tag' for the extraction logic."
 	      (nth 2 sum))
     ""))
 
-(defun ensc/tkenter-run (col row)
+(defun ensc/tkenter-run (_col row)
   (let ((date (ensc/tkenter-get-date row))
 	(project (ensc/tkenter-get-project row))
 	(desc-tag (ensc/tkenter-get-desc-tag row)))
@@ -366,7 +365,6 @@ Delegates to `ensc/tkenter-extract-desc-tag' for the extraction logic."
   :keymap ensc/tkenter-keymap
   (if ensc/tkenter-mode
       (progn
-	(make-variable-buffer-local 'ensc/tkenter-mode-now)
 	(setq ensc/tkenter-mode-now (ensc/tkenter-buffer-time))
 
 	(add-hook 'kill-buffer-hook
@@ -389,9 +387,10 @@ Raises an error if the expectation is not met."
            desc exp)))
 
 (defun ensc/tkenter-translate-project-raw (project)
-  (lax-plist-get
+  (plist-get
    (org-table-get-remote-range "project-mapping" ensc/tkenter-project-mapping-range)
-   project))
+   project
+   #'equal))
 
 (defun ensc/tkenter-translate-project (project)
   (let ((uuid (ensc/tkenter-translate-project-raw project)))
@@ -400,7 +399,7 @@ Raises an error if the expectation is not met."
 
     (substring-no-properties uuid)))
 
-(defun ensc/_tkenter-transmit (col row &optional force)
+(defun ensc/_tkenter-transmit (_col row &optional force)
   (let* ((date    (ensc/tkenter-parse-date (ensc/tkenter-get-non-null row :date)))
 	 (project (ensc/tkenter-translate-project (ensc/tkenter-get-non-null row :project)))
 	 (effort  (ensc/tkenter-parse-effort (ensc/tkenter-get-non-null row :effort)))
@@ -486,7 +485,8 @@ Raises an error if the expectation is not met."
 	    (let ((col (org-table-current-column))
 		  (row (org-table-current-line)))
 	      (when (and (/= col 0)(/= row 0))
-		(ensc/_tkenter-find-todo col row rel))))))))
+		(ensc/_tkenter-find-todo col row rel)))
+	  nil)))))
 
 (defun ensc/tkenter-find-todo-prev ()
   (interactive)
@@ -570,10 +570,10 @@ Raises an error if the expectation is not met."
 (defun ensc/tkenter-update-mapping-table ()
   (interactive)
   (let ((mapping-table-pos (ensc/tkenter-find-table "project-mapping"))
-	(row 2)
-	(effort-pushed 0)
-	(effort-pending 0)
-	cur effort url tmp-effort)
+	(project nil)
+	(tmp-effort nil)
+	(tmp-fee nil)
+	(row 2))
     (with-current-buffer (car mapping-table-pos)
       (org-with-wide-buffer
        (goto-char (nth 1 mapping-table-pos))
