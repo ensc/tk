@@ -407,7 +407,7 @@ Raises an error if the expectation is not met."
     (substring-no-properties uuid)))
 
 (defun ensc/_tkenter-transmit (_col row &optional force)
-  (let* ((date    (ensc/tkenter-parse-date (ensc/tkenter-get-non-null row :date)))
+  (let* ((date    (format-time-string "%d.%m.%Y" (ensc/tkenter-parse-date (ensc/tkenter-get-non-null row :date))))
 	 (project (ensc/tkenter-translate-project (ensc/tkenter-get-non-null row :project)))
 	 (effort  (ensc/tkenter-parse-effort (ensc/tkenter-get-non-null row :effort)))
 	 (desc	  (ensc/tkenter-table-get row :desc))
@@ -435,7 +435,7 @@ previous behaviour."
 					    nil t t
 					    "--batch"
 					    (concat "@" project)
-					    (format-time-string "%d.%m.%Y" date)
+					    date
 					    (concat "+"
 						    (ensc/tkenter-format-effort-single (nth 0 effort) t)
 						    "X+"
