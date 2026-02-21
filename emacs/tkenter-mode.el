@@ -73,6 +73,13 @@
 	(setq text nil)))
     text))
 
+(defun ensc/tkenter-table-get (row col)
+  "Wrapper around org-table-get.
+
+I takes a textual `col` description (see `ensc/tkenter-columns`) and
+ remove properties from the `org-table-get` result"
+  (substring-no-properties (org-table-get row (ensc/tkenter-column-get col))))
+
 (defun ensc/tkenter-convert-effort (effort)
   (if (= 1 (length effort))
       (* 3600 (nth 0 effort))
@@ -403,9 +410,9 @@ Raises an error if the expectation is not met."
   (let* ((date    (ensc/tkenter-parse-date (ensc/tkenter-get-non-null row :date)))
 	 (project (ensc/tkenter-translate-project (ensc/tkenter-get-non-null row :project)))
 	 (effort  (ensc/tkenter-parse-effort (ensc/tkenter-get-non-null row :effort)))
-	 (desc	  (org-table-get row (ensc/tkenter-column-get :desc)))
-	 (note	  (org-table-get row (ensc/tkenter-column-get :note)))
-	 (url	  (org-table-get row (ensc/tkenter-column-get :url)))
+	 (desc	  (ensc/tkenter-table-get row :desc))
+	 (note	  (ensc/tkenter-table-get row :note))
+	 (url	  (ensc/tkenter-table-get row :url))
 	 (tag	  (ensc/tkenter-extract-desc-tag desc)))
 
     ;; Report "Already submitted" early for both transmission modes
