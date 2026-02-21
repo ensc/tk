@@ -167,10 +167,18 @@
 (defun ensc/tkenter-get-project (row)
   (ensc/tkenter-get-non-null row :project))
 
+(defun ensc/tkenter-extract-desc-tag (desc)
+  "Extract a tag from the beginning of DESC and return it, or nil.
+
+Matches only when the first non-space characters are a bracketed tag"
+  (when (and desc (string-match "^[ \\t]*\\[\\([^]]+\\)\\]" desc))
+    (match-string 1 desc)))
+
 (defun ensc/tkenter-get-desc-tag (row)
-  (let ((desc (ensc/tkenter-get-non-null row :desc)))
-    (when (and desc (string-match "\\[\\([^]]+\\)\\]" desc))
-      (match-string 1 desc))))
+  "Get the tag from the description column at ROW.
+Returns the tag found inside square brackets or nil.
+Delegates to `ensc/tkenter-extract-desc-tag' for the extraction logic."
+  (ensc/tkenter-extract-desc-tag (ensc/tkenter-get-non-null row :desc)))
 
 (defun ensc/tkenter-summary-date (day)
   (ensc/tkenter-summary day :date))
@@ -372,6 +380,13 @@
 
 (defun ensc/tkenter-unittest-parse-effort (effort exp)
   (cl-assert (equal (ensc/tkenter-parse-effort effort) exp)))
+
+(defun ensc/tkenter-unittest-extract-desc-tag (desc exp)
+  "Unit-test helper: ensure that extracting tag from DESC equals EXP.
+Raises an error if the expectation is not met."
+  (unless (equal (ensc/tkenter-extract-desc-tag desc) exp)
+    (error "ensc/tkenter-unittest-extract-desc-tag failed: %S -> expected %S"
+           desc exp)))
 
 (defun ensc/tkenter-translate-project-raw (project)
   (lax-plist-get
@@ -600,6 +615,12 @@
   (ensc/tkenter-unittest-parse-effort ":15X:15"  '(   900   900))
   (ensc/tkenter-unittest-parse-effort ":15X10"   '(   900 36000))
   (ensc/tkenter-unittest-parse-effort "0X10"     '(     0 36000))
+  ;; tag extraction tests
+  (ensc/tkenter-unittest-extract-desc-tag "[tag] some text" "tag")
+  (ensc/tkenter-unittest-extract-desc-tag "[a][b] rest" "a")
+  (ensc/tkenter-unittest-extract-desc-tag "prefix [abc] rest" nil)
+  (ensc/tkenter-unittest-extract-desc-tag "no tag here" nil)
+  (ensc/tkenter-unittest-extract-desc-tag "[] empty" nil)
   )
 
 (ensc/tkenter-unittest)
