@@ -403,27 +403,40 @@ Raises an error if the expectation is not met."
   (let* ((date    (ensc/tkenter-parse-date (ensc/tkenter-get-non-null row :date)))
 	 (project (ensc/tkenter-translate-project (ensc/tkenter-get-non-null row :project)))
 	 (effort  (ensc/tkenter-parse-effort (ensc/tkenter-get-non-null row :effort)))
-	 (desc    (org-table-get row (ensc/tkenter-column-get :desc)))
-	 (note    (org-table-get row (ensc/tkenter-column-get :note)))
-	 (url     (org-table-get row (ensc/tkenter-column-get :url)))
-	 (result  nil))
+	 (desc	  (org-table-get row (ensc/tkenter-column-get :desc)))
+	 (note	  (org-table-get row (ensc/tkenter-column-get :note)))
+	 (url	  (org-table-get row (ensc/tkenter-column-get :url)))
+	 (tag	  (ensc/tkenter-extract-desc-tag desc)))
 
+    ;; Report "Already submitted" early for both transmission modes
     (when (and (not force) (not (string= url "")))
       (error "Already submitted!"))
 
-    (setq result (with-temp-buffer
-		   (let ((code (call-process ensc/tkenter-cli-program
-					     nil t t
-					     "--batch"
-					     (concat "@" project)
-					     (format-time-string "%d.%m.%Y" date)
-					     (concat "+"
-						     (ensc/tkenter-format-effort-single (nth 0 effort) t)
-						     "X+"
-						     (ensc/tkenter-format-effort-single (nth 1 effort) t))
-					     (or desc "")
-					     (or note ""))))
-		     (append (list code) (split-string (buffer-string))))))
+    (if (and project (string-prefix-p "@" project))
+	(ensc/_tkenter-transmit-tfs (substring project 1) date effort desc note tag row)
+      (ensc/_tkenter-transmit-cli project date effort desc note row))))
+
+(defun ensc/_tkenter-transmit-cli (project date effort desc note row)
+  "Transmit using the CLI program for PROJECT and update table ROW.
+
+This encapsulates the previous implementation: call the external CLI, parse
+the response, validate it and write the resulting URL into the table. The
+function signals errors for unexpected responses or failures, matching the
+previous behaviour."
+  (let ((result (with-temp-buffer
+		  (let ((code (call-process ensc/tkenter-cli-program
+					    nil t t
+					    "--batch"
+					    (concat "@" project)
+					    (format-time-string "%d.%m.%Y" date)
+					    (concat "+"
+						    (ensc/tkenter-format-effort-single (nth 0 effort) t)
+						    "X+"
+						    (ensc/tkenter-format-effort-single (nth 1 effort) t))
+					    (or desc "")
+					    (or note ""))))
+		    (append (list code) (split-string (buffer-string)))))))
+
     (cond
      ((= 0 (nth 0 result))
       (when (not (string= "OK" (nth 1 result)))
@@ -436,6 +449,21 @@ Raises an error if the expectation is not met."
       (org-table-align))
      (t
       (error "Failed to submit data: %s" result)))))
+
+(defun ensc/_tkenter-transmit-tfs (project date effort desc note tag &optional row)
+  "Placeholder for external transmit handling for PROJECT.
+
+When a project field starts with '@' this function is called instead of
+ the
+regular CLI path. Implementers should replace this stub with actual behaviour.
+The function should return a RESULT compatible with the current caller's
+expectations (a list whose first element is an exit code).
+
+This stub raises an error that includes all received arguments so callers can
+see what would be handed to a real implementation when debugging."
+
+  (error "External transmit for %s not implemented; args: %S"
+         project (list date effort desc note tag row)))
 
 (defun ensc/tkenter-transmit (&optional force)
   (interactive)
