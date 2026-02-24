@@ -78,7 +78,10 @@
 
 I takes a textual `col` description (see `ensc/tkenter-columns`) and
  remove properties from the `org-table-get` result"
-  (substring-no-properties (org-table-get row (ensc/tkenter-column-get col))))
+  (let ((s (when-let ((raw (org-table-get row (ensc/tkenter-column-get col))))
+	     (string-trim (substring-no-properties raw)))))
+    (when (and s (not (string-empty-p s)))
+      s)))
 
 (defun ensc/tkenter-convert-effort (effort)
   (if (= 1 (length effort))
@@ -434,7 +437,7 @@ Raises an error if the expectation is not met."
 	 (tag	  (ensc/tkenter-extract-desc-tag desc)))
 
     ;; Report "Already submitted" early for both transmission modes
-    (when (and (not force) (not (string= url "")))
+    (when (and (not force) url (not (string= url "")))
       (error "Already submitted!"))
 
     (if (and project (string-prefix-p "@" project))
