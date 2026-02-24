@@ -1,5 +1,6 @@
 ;; -*- lexical-binding: t -*-
 (require 'org-table)
+(require 'dash)
 
 (defvar-local ensc/tkenter-mode-now nil)
 (defvar-local ensc/tkenter-idle-timer nil "TK enter timer")
@@ -15,6 +16,12 @@
 (defcustom ensc/tkenter-cli-program
   "tk-sc"
   "The tk-cli program"
+  :type 'file
+  :group 'ensc/tkenter)
+
+(defcustom ensc/tkenter-tfs-program
+  "tk-tfs"
+  "The tk-tfs program"
   :type 'file
   :group 'ensc/tkenter)
 
@@ -490,8 +497,41 @@ expectations (a list whose first element is an exit code).
 This stub raises an error that includes all received arguments so callers can
 see what would be handed to a real implementation when debugging."
 
-  (error "External transmit for %s not implemented; args: %S"
-         project (list date effort desc note tag row)))
+  (let* ((prjid (split-string project))
+	 (prjid (or (when tag (nth 1 prjid))
+		    (nth 0 prjid)))
+	 (args  (list "-w" prjid
+		      "-d" date
+		      "-t"
+		      (concat (ensc/tkenter-format-effort-single (nth 0 effort) t)
+			      "X"
+			      (ensc/tkenter-format-effort-single (nth 1 effort) t))
+
+		      (when tag  (list "--work-item-type" "task" "--subtask" tag))
+		      (when note (list "--activity-type" note))
+		      desc))
+	 (args (-flatten args))
+	 (process-environment (cons "RUST_LOG=warn" process-environment))
+	 (stderr-file (make-temp-file "tk-tfs"))
+	 (result (with-temp-buffer
+                   (let ((code (apply #'call-process ensc/tkenter-tfs-program
+				      nil (list t stderr-file) t
+				      "add" args)))
+                     (list code (buffer-string))))))
+    (unwind-protect
+	(pcase result
+          (`(0 ,url)
+           (org-table-put row (ensc/tkenter-column-get :url)
+                          (format "[[%s][OK]]" (string-trim url)))
+           (message "Transmitted as %s" url)
+           (org-table-align))
+          (`(,code ,_)
+           (error "Failed to submit data (exit %d): %s"
+                  code
+                  (with-temp-buffer
+                    (insert-file-contents stderr-file)
+                    (buffer-string)))))
+      (delete-file stderr-file))))
 
 (defun ensc/tkenter-transmit (&optional force)
   (interactive)
