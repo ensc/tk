@@ -519,10 +519,10 @@ see what would be handed to a real implementation when debugging."
 
   (let (result (url t))
     (while (and url (not result))
-      (setq url (org-table-get row (ensc/tkenter-column-get :url)))
-      (if (string= url "")
-	  (setq result row)
-	(setq row (+ row rel))))
+      (setq url (ensc/tkenter-table-get row :url))
+      (if url
+	  (setq row (+ row rel))
+	(setq result row)))
     ;; when we are still inside the table and found an empty line,
     ;; change position
     (if (and result (> row ensc/tkenter-num-header-rows))
