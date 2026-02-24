@@ -393,6 +393,13 @@ Raises an error if the expectation is not met."
     (error "ensc/tkenter-unittest-extract-desc-tag failed: %S -> expected %S"
            desc exp)))
 
+(defun ensc/tkenter-unittest-guess-note (desc exp)
+  "Unit-test helper: ensure that guessing note from DESC equals EXP.
+Raises an error if the expectation is not met."
+  (unless (equal (ensc/tkenter-guess-note desc) exp)
+    (error "ensc/tkenter-unittest-guess-note failed: %S -> expected %S"
+           desc exp)))
+
 (defun ensc/tkenter-translate-project-raw (project)
   (plist-get
    (org-table-get-remote-range "project-mapping" ensc/tkenter-project-mapping-range)
@@ -406,12 +413,23 @@ Raises an error if the expectation is not met."
 
     (substring-no-properties uuid)))
 
+(defun ensc/tkenter-guess-note (desc)
+  "Guess a short note from DESC"
+  (when (and desc (stringp desc))
+    (let ((s (downcase (string-trim-left desc))))
+      (cond
+       ((string-match-p "^telko\\b" s) "telko")
+       ((string-match-p "^tests?\\b" s) "test")
+       ((string-match-p "^\\(?:dokumentation\\|documentation\\)\\b" s) "doc")
+       (t nil)))))
+
 (defun ensc/_tkenter-transmit (_col row &optional force)
   (let* ((date    (format-time-string "%d.%m.%Y" (ensc/tkenter-parse-date (ensc/tkenter-get-non-null row :date))))
 	 (project (ensc/tkenter-translate-project (ensc/tkenter-get-non-null row :project)))
 	 (effort  (ensc/tkenter-parse-effort (ensc/tkenter-get-non-null row :effort)))
 	 (desc	  (ensc/tkenter-table-get row :desc))
-	 (note	  (ensc/tkenter-table-get row :note))
+	 (note	  (or (ensc/tkenter-table-get row :note)
+		      (ensc/tkenter-guess-note desc)))
 	 (url	  (ensc/tkenter-table-get row :url))
 	 (tag	  (ensc/tkenter-extract-desc-tag desc)))
 
@@ -656,6 +674,15 @@ see what would be handed to a real implementation when debugging."
   (ensc/tkenter-unittest-extract-desc-tag "prefix [abc] rest" nil)
   (ensc/tkenter-unittest-extract-desc-tag "no tag here" nil)
   (ensc/tkenter-unittest-extract-desc-tag "[] empty" nil)
+  ;; guess-note tests
+  (ensc/tkenter-unittest-guess-note "telko Gespräch" "telko")
+  (ensc/tkenter-unittest-guess-note "Telko: something" "telko")
+  (ensc/tkenter-unittest-guess-note "Dokumentation of feature" "doc")
+  (ensc/tkenter-unittest-guess-note "documentation details" "doc")
+  (ensc/tkenter-unittest-guess-note "test abc" "test")
+  (ensc/tkenter-unittest-guess-note "tests xyz" "test")
+  (ensc/tkenter-unittest-guess-note "other text" nil)
+  (ensc/tkenter-unittest-guess-note "" nil)
   )
 
 (ensc/tkenter-unittest)
