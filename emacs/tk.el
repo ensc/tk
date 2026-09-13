@@ -134,7 +134,7 @@
        :coding 'binary
        :sentinel 'ensc/_tk-network-change
        :noquery t)
-    nil))
+    (error nil)))
 
 (defun ensc/_tk-trigger-send-inner ()
   (let ((msg (car ensc/_tk-events)))
