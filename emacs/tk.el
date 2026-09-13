@@ -128,7 +128,7 @@
        :name "tk"
        :type nil
        :host 'local
-       :remote (concat (getenv "XDG_RUNTIME_DIR") "/tk.sock")
+       :remote (concat (getenv "XDG_RUNTIME_DIR") "/tk/tk.sock")
        :nowait t
        :service nil
        :coding 'binary

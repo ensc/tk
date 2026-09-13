@@ -2,7 +2,7 @@
 Description=Timekeeping socket
 
 [Socket]
-ListenStream = %t/tk.sock
+ListenStream = %t/tk/tk.sock
 
 [Install]
 WantedBy = sockets.target

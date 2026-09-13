@@ -71,7 +71,7 @@ function tk.init()
 
     rdir = os.getenv("XDG_RUNTIME_DIR")
     if rdir then
-	self.sock_path = rdir  .. "/tk.sock"
+	self.sock_path = rdir  .. "/tk/tk.sock"
     end
 
     self.thread = coroutine.create(function () loop(self) end)

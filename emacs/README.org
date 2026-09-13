@@ -8,7 +8,7 @@ and active buffers to the tk daemon.
 Add something like
 
 #+BEGIN_SRC elisp
-(when (file-exists-p (concat (getenv "XDG_RUNTIME_DIR") "/tk.sock"))
+(when (file-exists-p (concat (getenv "XDG_RUNTIME_DIR") "/tk/tk.sock"))
   (load-file (concat (getenv "HOME") "/src/tk/emacs/tk.el"))
   (ensc/tk-start))
 #+END_SRC
