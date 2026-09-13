@@ -230,6 +230,7 @@
   (setq ensc/_tk-buffer-updated-timer
 	(run-with-timer 1 nil 'ensc/_tk-buffer-updated-late)))
 
+;;;###autoload
 (defun ensc/tk-start ()
   "start timekeeping timer"
   (interactive)
@@ -255,4 +256,5 @@
   (setq ensc/_tk-in-send nil)
   t)
 
-; (ensc/tk-start)
+(provide 'ensc-tk)
+(provide 'ensc/tk)

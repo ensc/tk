@@ -375,7 +375,7 @@ Delegates to `ensc/tkenter-extract-desc-tag' for the extraction logic."
       (ensc/_tkenter-normalize-cell col row)))
   (org-cycle))
 
-;;; autoload
+;;;###autoload
 (define-minor-mode ensc/tkenter-mode
   "mode for entering tk entries"
   :lighter " TM"
@@ -729,3 +729,6 @@ see what would be handed to a real implementation when debugging."
   )
 
 (ensc/tkenter-unittest)
+
+(provide 'ensc-tkenter)
+(provide 'ensc/tkenter)
